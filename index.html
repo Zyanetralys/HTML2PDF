@@ -3,395 +3,299 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTML → PDF | Conversor fiable</title>
+<title>HTML → PDF | Conversor local por lotes</title>
+<meta name="description" content="Convierte HTML a PDF por lotes, en local, sin servidor. Página continua sin saltos, eliminación de metadatos, marca de agua y combinación de documentos.">
 <style>
   :root{
-    --bg: #0b0e12;
-    --bg-panel: #12161c;
-    --bg-panel-2: #171c24;
-    --border: #232a35;
-    --text: #dbe2ea;
-    --text-dim: #8a94a3;
-    --accent: #4fd1a5;
-    --accent-dim: #2c7a5c;
-    --warn: #e0a640;
+    --bg: #0a0d12;
+    --bg-panel: #12161d;
+    --bg-panel-2: #171b23;
+    --border: #232935;
+    --text: #e5e9ef;
+    --text-dim: #8891a0;
+    --accent: #e3b23c;
+    --accent-dim: #8a6a24;
+    --accent2: #4f8fe0;
+    --accent2-dim: #2f568a;
+    --warn: #e0793d;
     --danger: #e0605a;
+    --ok-bg: rgba(227,178,60,0.08);
     --mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
     --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --radius: 6px;
+    --radius: 7px;
   }
-
   *{ box-sizing: border-box; }
+  *:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
+  body{ margin:0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+  @media (prefers-reduced-motion: reduce){ *{ animation-duration: .001ms !important; transition-duration: .001ms !important; } }
 
-  body{
-    margin:0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    font-size: 14px;
-    line-height: 1.5;
-  }
-
-  /* ---------- Header ---------- */
   header{
     border-bottom: 1px solid var(--border);
-    padding: 22px 28px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 16px;
-    flex-wrap: wrap;
+    padding: 18px 26px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
   }
-  .brand{ display:flex; align-items:center; gap:12px; }
-  .brand-mark{
-    width:34px; height:34px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
-    display:flex; align-items:center; justify-content:center;
-    font-family: var(--mono);
-    font-weight:700;
-    font-size:14px;
-    color:#06110d;
-    flex-shrink:0;
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .seal{
+    width:42px; height:42px; border-radius:50%; flex-shrink:0;
+    border:1.5px dashed var(--accent-dim);
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    font-family: var(--mono); font-weight:700; font-size:7.5px; letter-spacing:.03em; color: var(--accent);
+    transform: rotate(-8deg); transition: transform .35s ease, border-color .35s ease;
+    line-height:1.15;
   }
-  .brand h1{
-    font-size: 16px;
-    margin:0;
-    letter-spacing: 0.2px;
-    font-weight: 600;
-  }
-  .brand p{
-    margin: 2px 0 0;
-    font-size: 12px;
-    color: var(--text-dim);
-    font-family: var(--mono);
-  }
+  .brand:hover .seal{ transform: rotate(0deg); border-color: var(--accent); }
+  .brand h1{ font-size:16px; margin:0; font-weight:700; letter-spacing:-.01em; }
+  .brand p{ margin:2px 0 0; font-size:11.5px; color:var(--text-dim); font-family: var(--mono); }
   .status-pill{
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--accent);
-    border: 1px solid var(--accent-dim);
-    background: rgba(79,209,165,0.08);
-    padding: 5px 10px;
-    border-radius: 999px;
-    white-space: nowrap;
+    font-family: var(--mono); font-size:11px; color:var(--accent);
+    border:1px solid var(--accent-dim); background:var(--ok-bg);
+    padding:5px 10px; border-radius:999px; white-space:nowrap;
   }
 
-  /* ---------- Layout ---------- */
+  .limits-bar{
+    font-size: 11.5px; color: var(--text-dim); background: var(--bg-panel);
+    border-bottom: 1px solid var(--border); padding: 9px 26px; line-height:1.6;
+  }
+  .limits-bar b{ color: var(--accent); font-weight:600; }
+  .limits-bar a{ color: var(--accent2); }
+
+  .progress-track{ height:3px; background: var(--border); position:relative; overflow:hidden; }
+  .progress-fill{ height:100%; width:0%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); transition: width .25s ease; }
+
   main{
-    display:grid;
-    grid-template-columns: 380px 1fr;
-    gap: 0;
-    min-height: calc(100vh - 82px);
+    display:grid; grid-template-columns: 400px 1fr; min-height: calc(100vh - 130px);
   }
-  @media (max-width: 900px){
-    main{ grid-template-columns: 1fr; }
-  }
+  @media (max-width: 980px){ main{ grid-template-columns: 1fr; } }
 
   .panel{
-    border-right: 1px solid var(--border);
-    padding: 22px;
-    display:flex;
-    flex-direction:column;
-    gap: 20px;
-    overflow-y:auto;
+    border-right:1px solid var(--border); padding: 20px; display:flex; flex-direction:column; gap:18px; overflow-y:auto;
   }
-  @media (max-width: 900px){
-    .panel{ border-right:none; border-bottom: 1px solid var(--border); }
-  }
+  @media (max-width: 980px){ .panel{ border-right:none; border-bottom:1px solid var(--border); } }
 
   .section-label{
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    margin: 0 0 10px;
-    display:flex;
-    align-items:center;
-    gap:8px;
+    font-family: var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    color: var(--text-dim); margin:0 0 10px; display:flex; align-items:center; gap:8px;
   }
-  .section-label::before{
-    content:"";
-    width:14px; height:1px;
-    background: var(--accent-dim);
-  }
+  .section-label::before{ content:""; width:14px; height:1px; background: var(--accent-dim); }
+  .section-hint{ font-size: 11px; color: var(--text-dim); margin: -6px 0 10px; line-height:1.5; }
 
-  /* Tabs para elegir fuente */
-  .tabs{
-    display:flex;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 3px;
-    gap: 3px;
-  }
-  .tab-btn{
-    flex:1;
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
-    font-family: var(--sans);
-    font-size: 12px;
-    padding: 7px 6px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background .15s, color .15s;
-  }
-  .tab-btn.active{
-    background: var(--bg-panel-2);
-    color: var(--text);
-  }
+  .tabs{ display:flex; background: var(--bg-panel); border:1px solid var(--border); border-radius: var(--radius); padding:3px; gap:3px; }
+  .tab-btn{ flex:1; background:transparent; border:none; color:var(--text-dim); font-size:12px; padding:7px 6px; border-radius:4px; cursor:pointer; }
+  .tab-btn.active{ background: var(--bg-panel-2); color: var(--text); }
   .tab-panel{ display:none; }
   .tab-panel.active{ display:block; }
 
-  textarea, input[type="text"], input[type="url"], select{
-    width:100%;
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    color: var(--text);
-    border-radius: var(--radius);
-    padding: 9px 10px;
-    font-family: var(--mono);
-    font-size: 12.5px;
-    resize: vertical;
+  textarea, input[type="text"], input[type="url"], input[type="number"], select{
+    width:100%; background: var(--bg-panel); border:1px solid var(--border); color:var(--text);
+    border-radius: var(--radius); padding: 8px 10px; font-family: var(--mono); font-size:12.5px; resize:vertical;
   }
-  textarea:focus, input:focus, select:focus{
-    outline: none;
-    border-color: var(--accent-dim);
-  }
-  textarea#htmlInput{ min-height: 160px; }
-
-  input[type="file"]{
-    width:100%;
-    font-size: 12px;
-    color: var(--text-dim);
-  }
+  textarea:focus, input:focus, select:focus{ outline:none; border-color: var(--accent-dim); }
+  textarea#pasteInput{ min-height:120px; }
+  textarea#urlListInput{ min-height:70px; }
+  textarea#customCss{ min-height:60px; }
+  input[type="file"]{ width:100%; font-size:12px; color:var(--text-dim); }
 
   .dropzone{
-    border: 1px dashed var(--border);
-    border-radius: var(--radius);
-    padding: 22px 12px;
-    text-align:center;
-    color: var(--text-dim);
-    font-size: 12.5px;
-    cursor:pointer;
-    transition: border-color .15s, background .15s;
+    border:1px dashed var(--border); border-radius: var(--radius); padding:18px 12px; text-align:center;
+    color:var(--text-dim); font-size:12.5px; cursor:pointer; transition: border-color .2s, background .2s;
   }
-  .dropzone.drag{
-    border-color: var(--accent);
-    background: rgba(79,209,165,0.05);
-  }
+  .dropzone.drag{ border-color: var(--accent); background: var(--ok-bg); }
 
-  .field{ display:flex; flex-direction:column; gap:6px; }
-  .field label{
-    font-size: 12px;
-    color: var(--text-dim);
-  }
+  .field{ display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  .field label{ font-size:11.5px; color:var(--text-dim); display:flex; justify-content:space-between; }
   .row{ display:flex; gap:10px; }
   .row > .field{ flex:1; }
+  .checkline{ display:flex; align-items:flex-start; gap:8px; font-size:12.5px; margin-bottom:8px; cursor:pointer; }
+  .checkline input{ accent-color: var(--accent); width:14px; height:14px; margin-top:1px; flex-shrink:0; }
+  .checkline .cl-desc{ color: var(--text-dim); font-size:11px; display:block; margin-top:1px; }
+
+  button.add-btn{
+    width:100%; background: var(--bg-panel-2); border:1px solid var(--border); color:var(--text);
+    border-radius: var(--radius); padding:9px; font-size:12.5px; cursor:pointer; margin-top:8px;
+  }
+  button.add-btn:hover{ border-color: var(--accent-dim); }
 
   .radio-card{
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    cursor:pointer;
-    display:flex;
-    gap:10px;
-    align-items:flex-start;
-    background: var(--bg-panel);
+    border:1px solid var(--border); border-radius: var(--radius); padding:10px 12px; cursor:pointer;
+    display:flex; gap:10px; align-items:flex-start; background: var(--bg-panel);
   }
-  .radio-card.selected{
-    border-color: var(--accent-dim);
-    background: rgba(79,209,165,0.06);
-  }
+  .radio-card.selected{ border-color: var(--accent-dim); background: var(--ok-bg); }
   .radio-card input{ margin-top:2px; }
-  .radio-card .rc-title{
-    font-size: 13px;
-    font-weight:600;
-    color: var(--text);
-  }
-  .radio-card .rc-desc{
-    font-size: 11.5px;
-    color: var(--text-dim);
-    margin-top:2px;
-    line-height:1.4;
-  }
-  .rc-badge{
-    font-family: var(--mono);
-    font-size: 9.5px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    margin-left: 6px;
-    vertical-align: middle;
-  }
-  .rc-badge.rec{ background: rgba(79,209,165,0.15); color: var(--accent); }
-  .rc-badge.beta{ background: rgba(224,166,64,0.15); color: var(--warn); }
+  .rc-title{ font-size:13px; font-weight:600; color:var(--text); }
+  .rc-desc{ font-size:11.5px; color:var(--text-dim); margin-top:2px; line-height:1.4; }
+  .rc-badge{ font-family: var(--mono); font-size:9.5px; padding:1px 6px; border-radius:999px; margin-left:6px; }
+  .rc-badge.rec{ background: var(--ok-bg); color: var(--accent); }
+  .rc-badge.beta{ background: rgba(79,143,224,0.15); color: var(--accent2); }
 
   button.primary{
-    background: var(--accent);
-    color: #06110d;
-    border: none;
-    border-radius: var(--radius);
-    padding: 11px 14px;
-    font-weight: 700;
-    font-size: 13px;
-    cursor: pointer;
-    transition: filter .15s, transform .05s;
+    background: var(--accent); color:#1a1305; border:none; border-radius: var(--radius);
+    padding:12px 14px; font-weight:700; font-size:13px; cursor:pointer; transition: filter .15s;
   }
-  button.primary:hover{ filter: brightness(1.08); }
-  button.primary:active{ transform: translateY(1px); }
+  button.primary:hover{ filter:brightness(1.08); }
+  button.primary:disabled{ opacity:.5; cursor:not-allowed; }
   button.secondary{
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 14px;
-    font-size: 12.5px;
-    cursor: pointer;
+    background: transparent; color: var(--accent2); border:1px solid var(--accent2-dim); border-radius: var(--radius);
+    padding:10px 14px; font-weight:600; font-size:12.5px; cursor:pointer; width:100%; margin-top:8px;
   }
-  button.secondary:hover{ border-color: var(--accent-dim); }
-  button:disabled{ opacity: 0.5; cursor: not-allowed; }
+  button.secondary:hover{ background: rgba(79,143,224,0.08); }
+  button.secondary:disabled{ opacity:.4; cursor:not-allowed; }
+  button.icon-btn{ background:transparent; border:none; color:var(--text-dim); cursor:pointer; font-size:14px; padding:2px 6px; }
+  button.icon-btn:hover{ color: var(--danger); }
+  button.icon-btn.drag-handle{ cursor:grab; font-size:12px; }
 
-  .btn-row{ display:flex; gap:10px; }
+  .queue{ display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; }
+  .queue-item{
+    display:flex; align-items:center; gap:6px; background: var(--bg-panel); border:1px solid var(--border);
+    border-radius: var(--radius); padding:7px 10px; font-size:12px;
+  }
+  .queue-item.dragging{ opacity:.4; }
+  .queue-item .qi-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family: var(--mono); }
+  .queue-item .qi-status{ font-family: var(--mono); font-size:10px; padding:2px 7px; border-radius:999px; white-space:nowrap; }
+  .qi-status.pending{ background: rgba(138,148,163,0.15); color: var(--text-dim); }
+  .qi-status.processing{ background: rgba(224,121,61,0.15); color: var(--warn); }
+  .qi-status.done{ background: var(--ok-bg); color: var(--accent); }
+  .qi-status.error{ background: rgba(224,96,90,0.15); color: var(--danger); }
+  .queue-empty{ font-size:12px; color: var(--text-dim); font-style:italic; padding: 6px 0; }
+  .queue-counters{ font-size:11px; color:var(--text-dim); font-family:var(--mono); margin-top:4px; }
 
   .log{
-    font-family: var(--mono);
-    font-size: 11.5px;
-    color: var(--text-dim);
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    max-height: 110px;
-    overflow-y:auto;
+    font-family: var(--mono); font-size:11.5px; color:var(--text-dim); background: var(--bg-panel);
+    border:1px solid var(--border); border-radius: var(--radius); padding:10px 12px; max-height:140px; overflow-y:auto;
   }
-  .log .ok{ color: var(--accent); }
-  .log .err{ color: var(--danger); }
-  .log .warn{ color: var(--warn); }
+  .log .ok{ color: var(--accent); } .log .err{ color: var(--danger); } .log .warn{ color: var(--warn); }
   .log div{ margin-bottom:3px; }
 
-  /* ---------- Preview ---------- */
-  .preview-wrap{
-    display:flex;
-    flex-direction:column;
-    background: #05070a;
-  }
+  .preview-wrap{ display:flex; flex-direction:column; background:#05070a; }
   .preview-toolbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 12px 20px;
-    border-bottom: 1px solid var(--border);
-    font-family: var(--mono);
-    font-size: 11.5px;
-    color: var(--text-dim);
+    display:flex; align-items:center; justify-content:space-between; padding:12px 20px;
+    border-bottom:1px solid var(--border); font-family: var(--mono); font-size:11.5px; color:var(--text-dim); gap: 10px; flex-wrap: wrap;
   }
-  .preview-stage{
-    flex:1;
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-    padding: 28px;
-    overflow:auto;
+  .zoom-controls{ display:flex; align-items:center; gap:4px; }
+  .zoom-controls button{
+    background: var(--bg-panel-2); border:1px solid var(--border); color:var(--text); width:22px; height:22px;
+    border-radius:4px; cursor:pointer; font-size:12px; line-height:1;
   }
-  .page-shadow{
-    background: white;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    width: 210mm;
-    min-height: 297mm;
-    max-width: 100%;
-  }
-  .page-shadow.landscape{
-    width: 297mm;
-    min-height: 210mm;
-  }
-  .page-shadow.letter{ width: 215.9mm; min-height: 279.4mm; }
-  .page-shadow.letter.landscape{ width: 279.4mm; min-height: 215.9mm; }
-  .page-shadow.legal{ width: 215.9mm; min-height: 355.6mm; }
-  .page-shadow.legal.landscape{ width: 355.6mm; min-height: 215.9mm; }
-
-  iframe#preview{
-    width:100%;
-    height:100%;
-    min-height: 297mm;
-    border:none;
-    display:block;
-  }
+  .zoom-controls span{ min-width:38px; text-align:center; display:inline-block; }
+  .preview-stage{ flex:1; display:flex; align-items:flex-start; justify-content:center; padding:26px; overflow:auto; }
+  .page-shadow-outer{ transform-origin: top center; transition: transform .15s ease; }
+  .page-shadow{ background:white; box-shadow: 0 10px 40px rgba(0,0,0,0.55); width:210mm; min-height:297mm; max-width:100%; position:relative; }
+  .page-shadow.a3{ width:297mm; min-height:420mm; }
+  .page-shadow.a2{ width:420mm; min-height:594mm; }
+  .page-shadow.letter{ width:215.9mm; min-height:279.4mm; }
+  .page-shadow.legal{ width:215.9mm; min-height:355.6mm; }
+  .page-shadow.continuous{ min-height: 150mm; }
+  .page-shadow.custom{ min-height: 150mm; }
+  .page-shadow.landscape{ width: auto; min-height: auto; }
+  iframe#preview{ width:100%; height:100%; min-height:297mm; border:none; display:block; }
 
   footer{
-    padding: 14px 28px;
-    border-top: 1px solid var(--border);
-    font-size: 11.5px;
-    color: var(--text-dim);
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    flex-wrap:wrap;
+    padding: 12px 26px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text-dim);
+    display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;
   }
   footer a{ color: var(--accent); text-decoration:none; }
+  kbd{ font-family: var(--mono); background: var(--bg-panel-2); border:1px solid var(--border); border-radius:4px; padding:0 5px; font-size:10.5px; }
 </style>
 </head>
 <body>
 
 <header>
   <div class="brand">
-    <div class="brand-mark">PDF</div>
+    <div class="seal">SIN<br>SERVIDOR</div>
     <div>
-      <h1>HTML → PDF</h1>
-      <p>Conversión local, sin servidor, sin subir tu documento a ningún sitio</p>
+      <h1>HTML → PDF por lotes</h1>
+      <p>Todo se procesa en tu navegador — nada se sube a ningún servidor</p>
     </div>
   </div>
   <span class="status-pill" id="statusPill">● listo</span>
 </header>
 
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="limits-bar">
+  <b>Diferencia con servicios como Sejda:</b> esos servicios envían tu HTML a un navegador headless en su servidor. Esta página es 100% estática (GitHub Pages) y hace todo el trabajo en tu propio navegador: nada sale de tu equipo, no hay límites de archivos por hora ni marcas de agua. Por defecto genera una <b>página continua sin saltos</b> y elimina los metadatos que puede, para reducir tu huella de datos aún más que un servicio en la nube.
+</div>
+
 <main>
-  <!-- ============ PANEL DE CONTROL ============ -->
   <div class="panel">
 
     <div>
-      <p class="section-label">1. Origen del HTML</p>
+      <p class="section-label">1. Añadir documentos a la cola</p>
       <div class="tabs">
-        <button class="tab-btn active" data-tab="tabPaste">Pegar código</button>
-        <button class="tab-btn" data-tab="tabFile">Subir archivo</button>
-        <button class="tab-btn" data-tab="tabUrl">Desde URL</button>
+        <button class="tab-btn active" data-tab="tabPaste">Código</button>
+        <button class="tab-btn" data-tab="tabFile">Archivos</button>
+        <button class="tab-btn" data-tab="tabUrl">URLs</button>
       </div>
 
       <div id="tabPaste" class="tab-panel active" style="margin-top:12px;">
-        <textarea id="htmlInput" spellcheck="false" placeholder="Pega aquí tu HTML completo (o un fragmento)..."></textarea>
+        <textarea id="pasteInput" spellcheck="false" placeholder="Pega aquí tu HTML..."></textarea>
+        <button class="add-btn" id="addPasteBtn">+ Añadir a la cola</button>
       </div>
 
       <div id="tabFile" class="tab-panel" style="margin-top:12px;">
-        <div class="dropzone" id="dropzone">
-          Arrastra un archivo .html aquí<br>o haz clic para seleccionarlo
-          <input type="file" id="fileInput" accept=".html,.htm" style="display:none;">
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Seleccionar archivos HTML">
+          Arrastra uno o varios archivos .html<br>o haz clic para seleccionarlos
+          <input type="file" id="fileInput" accept=".html,.htm" multiple style="display:none;">
         </div>
       </div>
 
       <div id="tabUrl" class="tab-panel" style="margin-top:12px;">
-        <div class="field">
-          <label>URL del documento HTML</label>
-          <input type="url" id="urlInput" placeholder="https://ejemplo.com/informe.html">
-        </div>
-        <button class="secondary" id="loadUrlBtn" style="margin-top:8px; width:100%;">Cargar desde URL</button>
-        <p style="font-size:11.5px; color:var(--text-dim); margin-top:8px;">
-          Solo funciona si el servidor remoto permite CORS. Si falla, descarga el archivo y usa la pestaña "Subir archivo".
-        </p>
+        <textarea id="urlListInput" spellcheck="false" placeholder="Una URL por línea:&#10;https://ejemplo.com/pagina1&#10;https://ejemplo.com/pagina2"></textarea>
+        <p class="section-hint" style="margin-top:6px;">Solo funciona si el servidor remoto permite CORS. Si falla, descarga el HTML y usa la pestaña "Archivos".</p>
+        <button class="add-btn" id="addUrlBtn">+ Añadir a la cola</button>
       </div>
     </div>
 
     <div>
-      <p class="section-label">2. Formato de página</p>
+      <p class="section-label">Cola (<span id="queueCount">0</span>)</p>
+      <div class="queue" id="queue">
+        <div class="queue-empty">Sin documentos todavía</div>
+      </div>
+      <div class="queue-counters" id="queueCounters"></div>
+    </div>
+
+    <div>
+      <p class="section-label">2. Renderizado</p>
+      <div class="row">
+        <div class="field">
+          <label>Ancho de ventana (px)</label>
+          <input type="number" id="viewportWidth" value="1024" min="320" max="2400">
+        </div>
+        <div class="field">
+          <label>Retraso inicial (s)</label>
+          <input type="number" id="initialDelay" value="0" min="0" max="5" step="0.5">
+        </div>
+      </div>
+      <p class="section-hint" style="margin-top:-2px;">El ancho de ventana simula en qué anchura de pantalla se renderiza el HTML antes de capturarlo. El retraso inicial da tiempo a scripts que cargan contenido de forma asíncrona.</p>
+      <div class="field">
+        <label>Ocultar elementos (selector CSS, opcional)</label>
+        <input type="text" id="hideSelector" placeholder="ej: .cookie-banner, #ads">
+      </div>
+      <div class="field">
+        <label>CSS adicional (opcional)</label>
+        <textarea id="customCss" spellcheck="false" placeholder="/* se inyecta antes de generar el PDF */"></textarea>
+      </div>
+      <label class="checkline">
+        <input type="checkbox" id="usePrintCss" checked>
+        <span>Aplicar reglas @media print del documento</span>
+      </label>
+    </div>
+
+    <div>
+      <p class="section-label">3. Formato de salida</p>
       <div class="row">
         <div class="field">
           <label>Tamaño</label>
           <select id="pageSize">
+            <option value="continuous" selected>Continua (sin saltos, recomendada)</option>
             <option value="a4">A4</option>
-            <option value="letter">Carta (Letter)</option>
+            <option value="a3">A3</option>
+            <option value="a2">A2</option>
+            <option value="letter">Carta</option>
             <option value="legal">Legal</option>
+            <option value="custom">Personalizado…</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field" id="orientationGroup">
           <label>Orientación</label>
           <select id="orientation">
             <option value="portrait">Vertical</option>
@@ -399,74 +303,149 @@
           </select>
         </div>
       </div>
-      <div class="field" style="margin-top:10px;">
-        <label>Márgenes (mm)</label>
-        <input type="text" id="margins" value="15" placeholder="ej: 15 o 10,15,10,15">
+
+      <div class="row" id="continuousWidthGroup">
+        <div class="field">
+          <label>Ancho de página continua (mm)</label>
+          <input type="number" id="continuousWidthMM" value="210" min="50" max="2000">
+        </div>
       </div>
-      <div class="field" style="margin-top:10px;">
-        <label>Nombre del archivo</label>
-        <input type="text" id="filename" value="documento.pdf">
+
+      <div class="row" id="customSizeGroup" style="display:none;">
+        <div class="field">
+          <label>Ancho (mm)</label>
+          <input type="number" id="customWidthMM" value="210" min="50" max="2000">
+        </div>
+        <div class="field">
+          <label>Alto (mm)</label>
+          <input type="number" id="customHeightMM" value="297" min="50" max="3000">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Margen</label>
+          <input type="text" id="margins" value="15">
+        </div>
+        <div class="field">
+          <label>Unidad</label>
+          <select id="marginUnit">
+            <option value="mm">mm</option>
+            <option value="cm">cm</option>
+            <option value="in">in</option>
+            <option value="px">px</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="checkline" id="avoidBreaksGroup">
+        <input type="checkbox" id="avoidBreaks" checked>
+        <span>Evitar cortes de tablas, filas, títulos e imágenes entre páginas
+          <span class="cl-desc">Cuando el tamaño es fijo (no continuo), desplaza el corte de página para no partir un elemento por la mitad.</span>
+        </span>
+      </label>
+
+      <label class="checkline">
+        <input type="checkbox" id="showFooter">
+        <span>Mostrar nombre/URL y fecha al pie de página</span>
+      </label>
+      <div class="field">
+        <label>Encabezado personalizado (opcional)</label>
+        <input type="text" id="headerText" placeholder="ej: Confidencial – uso interno">
+      </div>
+      <div class="field">
+        <label>Marca de agua (opcional)</label>
+        <input type="text" id="watermarkText" placeholder="ej: BORRADOR">
       </div>
     </div>
 
     <div>
-      <p class="section-label">3. Método de conversión</p>
+      <p class="section-label">4. Metadatos</p>
+      <label class="checkline">
+        <input type="checkbox" id="removeMetadata" checked>
+        <span>Eliminar metadatos del documento
+          <span class="cl-desc">Borra título, autor y generador antes de exportar. El "Productor" que añade el propio motor PDF del navegador no se puede suprimir vía JavaScript; el modo "descarga automática" sí permite vaciarlo casi por completo.</span>
+        </span>
+      </label>
+    </div>
 
+    <div>
+      <p class="section-label">5. Método de conversión</p>
       <label class="radio-card selected" id="cardNative">
         <input type="radio" name="mode" value="native" checked>
         <div>
-          <div class="rc-title">Impresión nativa del navegador <span class="rc-badge rec">recomendado</span></div>
-          <div class="rc-desc">Usa el motor de renderizado real de Chrome/Edge/Firefox. Respeta CSS Grid, Flexbox, fuentes web, gradientes y saltos de página con fidelidad total. Se abre el diálogo de impresión: elige "Guardar como PDF".</div>
+          <div class="rc-title">Impresión nativa <span class="rc-badge rec">recomendado</span></div>
+          <div class="rc-desc">Motor de impresión real del navegador ("Guardar como PDF"). Máxima fidelidad tipográfica. Un documento a la vez.</div>
         </div>
       </label>
-
       <label class="radio-card" id="cardCanvas" style="margin-top:8px;">
         <input type="radio" name="mode" value="canvas">
         <div>
-          <div class="rc-title">Descarga automática <span class="rc-badge beta">beta</span></div>
-          <div class="rc-desc">Genera el PDF y lo descarga directamente sin diálogo, tomando una "foto" del documento (html2pdf.js). Más cómodo, pero puede perder fidelidad en layouts muy complejos o fuentes no cargadas a tiempo.</div>
+          <div class="rc-title">Descarga automática <span class="rc-badge beta">sin diálogos</span></div>
+          <div class="rc-desc">Descarga directa sin diálogos, con numeración de página, encabezado/pie y opción de combinar todo en un único PDF o en un .zip.</div>
         </div>
       </label>
+
+      <div id="canvasExtras" style="display:none; margin-top:10px;">
+        <label class="checkline">
+          <input type="checkbox" id="mergeIntoOne">
+          <span>Combinar todos los documentos en un único PDF
+            <span class="cl-desc">Cada documento ocupa una página continua propia dentro de un mismo archivo.</span>
+          </span>
+        </label>
+        <label class="checkline">
+          <input type="checkbox" id="outputZip">
+          <span>Descargar todo en un .zip en vez de archivos sueltos</span>
+        </label>
+      </div>
     </div>
 
-    <div class="btn-row">
-      <button class="secondary" id="previewBtn" style="flex:1;">Actualizar vista previa</button>
-    </div>
-    <button class="primary" id="generateBtn">Generar PDF</button>
+    <button class="primary" id="processBtn" disabled>Procesar cola (0)</button>
+    <button class="secondary" id="downloadZipBtn" style="display:none;">Descargar resultados en .zip</button>
 
     <div>
       <p class="section-label">Registro</p>
-      <div class="log" id="log"><div>Esperando documento…</div></div>
+      <div class="log" id="log"><div>Añade documentos a la cola para empezar. Atajo: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> procesa la cola.</div></div>
     </div>
   </div>
 
-  <!-- ============ VISTA PREVIA ============ -->
   <div class="preview-wrap">
     <div class="preview-toolbar">
       <span id="previewInfo">Sin contenido cargado</span>
-      <span>Vista previa aproximada — el PDF final depende del método elegido</span>
+      <div style="display:flex; align-items:center; gap:14px;">
+        <span>La vista previa es orientativa</span>
+        <div class="zoom-controls">
+          <button id="zoomOut" title="Alejar">−</button>
+          <span id="zoomLevel">100%</span>
+          <button id="zoomIn" title="Acercar">+</button>
+        </div>
+      </div>
     </div>
     <div class="preview-stage">
-      <div class="page-shadow" id="pageShadow">
-        <iframe id="preview" title="Vista previa del documento" sandbox="allow-same-origin allow-scripts"></iframe>
+      <div class="page-shadow-outer" id="pageShadowOuter">
+        <div class="page-shadow" id="pageShadow">
+          <iframe id="preview" title="Vista previa" sandbox="allow-same-origin allow-scripts"></iframe>
+        </div>
       </div>
     </div>
   </div>
 </main>
 
 <footer>
-  <span>Todo el procesamiento ocurre en tu navegador. Ningún archivo se envía a ningún servidor.</span>
-  <span>Método nativo → diálogo de impresión del sistema · Método automático → <a href="https://ekoopmans.github.io/html2pdf.js/" target="_blank" rel="noopener">html2pdf.js</a></span>
+  <span>Procesamiento 100% local. Ningún archivo se envía a ningún servidor. Tus preferencias se recuerdan en este navegador.</span>
+  <span>Nativo → motor de impresión del sistema · Automático → html2canvas + jsPDF, con paginación inteligente propia</span>
 </footer>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 (function(){
   "use strict";
-
   const $ = (id) => document.getElementById(id);
   const logEl = $("log");
   const statusPill = $("statusPill");
+  const progressFill = $("progressFill");
 
   function log(msg, type){
     const line = document.createElement("div");
@@ -476,305 +455,734 @@
     logEl.appendChild(line);
     logEl.scrollTop = logEl.scrollHeight;
   }
-
   function setStatus(text, ok){
     statusPill.textContent = "● " + text;
     statusPill.style.color = ok === false ? "var(--danger)" : "var(--accent)";
     statusPill.style.borderColor = ok === false ? "var(--danger)" : "var(--accent-dim)";
   }
+  function setProgress(done, total){
+    const pct = total ? Math.round((done/total)*100) : 0;
+    progressFill.style.width = pct + "%";
+  }
 
-  // ---------------- Tabs ----------------
-  const tabBtns = document.querySelectorAll(".tab-btn");
-  tabBtns.forEach(btn => {
+  /* ---------- Preferencias persistentes (localStorage) ---------- */
+  const PREF_KEY = "html2pdf_prefs_v1";
+  const PREF_IDS = ["viewportWidth","initialDelay","hideSelector","customCss","usePrintCss",
+    "pageSize","orientation","continuousWidthMM","customWidthMM","customHeightMM","margins","marginUnit",
+    "avoidBreaks","showFooter","headerText","watermarkText","removeMetadata","mergeIntoOne","outputZip"];
+
+  function savePrefs(){
+    try{
+      const data = {};
+      PREF_IDS.forEach(id => {
+        const el = $(id);
+        if (!el) return;
+        data[id] = el.type === "checkbox" ? el.checked : el.value;
+      });
+      const mode = document.querySelector('input[name="mode"]:checked');
+      if (mode) data.mode = mode.value;
+      localStorage.setItem(PREF_KEY, JSON.stringify(data));
+    }catch(e){ /* almacenamiento no disponible: se ignora */ }
+  }
+  function loadPrefs(){
+    try{
+      const raw = localStorage.getItem(PREF_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      PREF_IDS.forEach(id => {
+        const el = $(id);
+        if (!el || !(id in data)) return;
+        if (el.type === "checkbox") el.checked = data[id];
+        else el.value = data[id];
+      });
+      if (data.mode === "canvas"){ $("cardCanvas").click(); }
+    }catch(e){ /* preferencias corruptas o bloqueadas: se ignora */ }
+  }
+  document.addEventListener("change", (e) => {
+    if (PREF_IDS.includes(e.target.id)) savePrefs();
+  });
+
+  /* ---------- Tabs ---------- */
+  document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-      tabBtns.forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
       btn.classList.add("active");
       $(btn.dataset.tab).classList.add("active");
     });
   });
 
-  // ---------------- Radio cards ----------------
-  const cardNative = $("cardNative");
-  const cardCanvas = $("cardCanvas");
-  [cardNative, cardCanvas].forEach(card => {
-    card.addEventListener("click", () => {
-      cardNative.classList.toggle("selected", card === cardNative);
-      cardCanvas.classList.toggle("selected", card === cardCanvas);
-      card.querySelector("input").checked = true;
-    });
+  /* ---------- Modo de conversión ---------- */
+  const cardNative = $("cardNative"), cardCanvas = $("cardCanvas"), canvasExtras = $("canvasExtras");
+  const downloadZipBtn = $("downloadZipBtn");
+  function selectMode(card){
+    cardNative.classList.toggle("selected", card === cardNative);
+    cardCanvas.classList.toggle("selected", card === cardCanvas);
+    card.querySelector("input").checked = true;
+    canvasExtras.style.display = card === cardCanvas ? "block" : "none";
+    downloadZipBtn.style.display = "none";
+    savePrefs();
+  }
+  [cardNative, cardCanvas].forEach(card => card.addEventListener("click", () => selectMode(card)));
+
+  $("mergeIntoOne").addEventListener("change", () => {
+    if ($("mergeIntoOne").checked){ $("outputZip").checked = false; $("outputZip").disabled = true; }
+    else { $("outputZip").disabled = false; }
   });
 
-  // ---------------- Carga de archivo ----------------
-  const dropzone = $("dropzone");
-  const fileInput = $("fileInput");
-  const htmlInput = $("htmlInput");
+  /* ---------- Tamaño de página: mostrar/ocultar campos según selección ---------- */
+  function refreshSizeFields(){
+    const size = $("pageSize").value;
+    $("continuousWidthGroup").style.display = size === "continuous" ? "flex" : "none";
+    $("customSizeGroup").style.display = size === "custom" ? "flex" : "none";
+    $("avoidBreaksGroup").style.display = size === "continuous" ? "none" : "flex";
+    $("orientationGroup").style.display = size === "continuous" ? "none" : "block";
+  }
+  $("pageSize").addEventListener("change", refreshSizeFields);
 
+  /* ---------- Cola de documentos ---------- */
+  let queue = [];
+  let uid = 0;
+  let dragSourceId = null;
+
+  function renderQueue(){
+    const el = $("queue");
+    el.innerHTML = "";
+    if (!queue.length){
+      el.innerHTML = '<div class="queue-empty">Sin documentos todavía</div>';
+    } else {
+      queue.forEach(job => {
+        const row = document.createElement("div");
+        row.className = "queue-item";
+        row.draggable = true;
+        row.dataset.id = job.id;
+        row.innerHTML =
+          '<button class="icon-btn drag-handle" title="Arrastrar para reordenar">⋮⋮</button>' +
+          '<span class="qi-name" title="' + escapeHtml(job.name) + '">' + escapeHtml(job.name) + '</span>' +
+          '<span class="qi-status ' + job.status + '">' + statusLabel(job.status) + '</span>' +
+          '<button class="icon-btn qi-remove" data-id="' + job.id + '" title="Quitar">✕</button>';
+        row.querySelector(".qi-remove").addEventListener("click", () => {
+          queue = queue.filter(j => j.id !== job.id);
+          renderQueue();
+        });
+        row.addEventListener("dragstart", () => { dragSourceId = job.id; row.classList.add("dragging"); });
+        row.addEventListener("dragend", () => row.classList.remove("dragging"));
+        row.addEventListener("dragover", (e) => e.preventDefault());
+        row.addEventListener("drop", (e) => {
+          e.preventDefault();
+          if (dragSourceId === null || dragSourceId === job.id) return;
+          const fromIdx = queue.findIndex(j => j.id === dragSourceId);
+          const toIdx = queue.findIndex(j => j.id === job.id);
+          if (fromIdx === -1 || toIdx === -1) return;
+          const [moved] = queue.splice(fromIdx, 1);
+          queue.splice(toIdx, 0, moved);
+          dragSourceId = null;
+          renderQueue();
+        });
+        el.appendChild(row);
+      });
+    }
+    $("queueCount").textContent = queue.length;
+    $("processBtn").textContent = "Procesar cola (" + queue.length + ")";
+    $("processBtn").disabled = queue.length === 0;
+    const done = queue.filter(j => j.status === "done").length;
+    const err = queue.filter(j => j.status === "error").length;
+    $("queueCounters").textContent = queue.length ? (done + " hechos · " + err + " con error · " + queue.length + " total") : "";
+  }
+  function statusLabel(s){
+    return { pending:"pendiente", processing:"procesando", done:"hecho", error:"error" }[s] || s;
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  function addJob(name, type, html){
+    const job = { id: ++uid, name, type, html, status: "pending", error: null };
+    queue.push(job);
+    renderQueue();
+    if (queue.length === 1) loadJobPreview(job);
+    return job;
+  }
+
+  $("addPasteBtn").addEventListener("click", () => {
+    const html = $("pasteInput").value;
+    if (!html.trim()){ log("No hay código para añadir", "warn"); return; }
+    const job = addJob("fragmento-" + (uid+1) + ".html", "paste", html);
+    log('Añadido "' + job.name + '" a la cola', "ok");
+    $("pasteInput").value = "";
+  });
+
+  const dropzone = $("dropzone"), fileInput = $("fileInput");
   dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); fileInput.click(); } });
   dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("drag"); });
   dropzone.addEventListener("dragleave", () => dropzone.classList.remove("drag"));
   dropzone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropzone.classList.remove("drag");
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    e.preventDefault(); dropzone.classList.remove("drag");
+    handleFiles(e.dataTransfer.files);
   });
-  fileInput.addEventListener("change", () => {
-    if (fileInput.files.length) handleFile(fileInput.files[0]);
-  });
+  fileInput.addEventListener("change", () => handleFiles(fileInput.files));
 
-  function handleFile(file){
-    if (!/\.html?$/i.test(file.name)){
-      log("El archivo debe ser .html o .htm", "err");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      htmlInput.value = e.target.result;
-      document.querySelector('[data-tab="tabPaste"]').click();
-      log('Archivo "' + file.name + '" cargado (' + Math.round(file.size/1024) + ' KB)', "ok");
-      renderPreview();
-    };
-    reader.onerror = () => log("No se pudo leer el archivo", "err");
-    reader.readAsText(file, "UTF-8");
+  function handleFiles(fileList){
+    Array.from(fileList).forEach(file => {
+      if (!/\.html?$/i.test(file.name)){
+        log('"' + file.name + '" no es .html/.htm, se omite', "warn");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        addJob(file.name, "file", e.target.result);
+        log('Añadido "' + file.name + '" a la cola', "ok");
+      };
+      reader.onerror = () => log('No se pudo leer "' + file.name + '"', "err");
+      reader.readAsText(file, "UTF-8");
+    });
   }
 
-  // ---------------- Carga desde URL ----------------
-  $("loadUrlBtn").addEventListener("click", async () => {
-    const url = $("urlInput").value.trim();
-    if (!url){ log("Introduce una URL válida", "warn"); return; }
-    log("Solicitando " + url + " …");
-    try{
-      const res = await fetch(url, { mode: "cors" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const text = await res.text();
-      htmlInput.value = text;
-      document.querySelector('[data-tab="tabPaste"]').click();
-      log("Documento cargado desde URL", "ok");
-      renderPreview();
-    }catch(err){
-      log("Fallo al cargar la URL (probable bloqueo CORS): " + err.message, "err");
-      log("Descarga el HTML manualmente y súbelo con la pestaña 'Subir archivo'", "warn");
-    }
+  $("addUrlBtn").addEventListener("click", () => {
+    const lines = $("urlListInput").value.split("\n").map(l => l.trim()).filter(Boolean);
+    if (!lines.length){ log("No hay URLs para añadir", "warn"); return; }
+    lines.forEach(url => addJob(url, "url", null));
+    log(lines.length + " URL(s) añadidas a la cola (se descargarán al procesar)", "ok");
+    $("urlListInput").value = "";
   });
 
-  // ---------------- Vista previa ----------------
-  const preview = $("preview");
-  const pageShadow = $("pageShadow");
-  const previewInfo = $("previewInfo");
+  /* ---------- Vista previa + zoom ---------- */
+  const preview = $("preview"), pageShadow = $("pageShadow"), previewInfo = $("previewInfo"), pageShadowOuter = $("pageShadowOuter");
+  let zoom = 1;
+  function applyZoom(){
+    pageShadowOuter.style.transform = "scale(" + zoom + ")";
+    $("zoomLevel").textContent = Math.round(zoom * 100) + "%";
+  }
+  $("zoomIn").addEventListener("click", () => { zoom = Math.min(1.5, zoom + 0.1); applyZoom(); });
+  $("zoomOut").addEventListener("click", () => { zoom = Math.max(0.4, zoom - 0.1); applyZoom(); });
 
-  function currentPageClasses(){
-    const size = $("pageSize").value;
-    const orientation = $("orientation").value;
+  function pageShadowClasses(){
+    const size = $("pageSize").value, orientation = $("orientation").value;
     let cls = "page-shadow";
     if (size !== "a4") cls += " " + size;
-    if (orientation === "landscape") cls += " landscape";
+    if (orientation === "landscape" && size !== "continuous" && size !== "custom") cls += " landscape";
     return cls;
   }
-
-  function renderPreview(){
-    const html = htmlInput.value;
-    pageShadow.className = currentPageClasses();
-    if (!html.trim()){
-      previewInfo.textContent = "Sin contenido cargado";
-      preview.srcdoc = "<html><body style='font-family:sans-serif;color:#999;padding:40px;'>Vista previa vacía</body></html>";
+  function loadJobPreview(job){
+    pageShadow.className = pageShadowClasses();
+    if (job.type === "url" && !job.html){
+      previewInfo.textContent = job.name + " (se cargará al procesar)";
+      preview.srcdoc = "<body style='font-family:sans-serif;color:#999;padding:40px;'>URL pendiente de carga</body>";
       return;
     }
-    preview.srcdoc = html;
-    const sizeLabel = $("pageSize").options[$("pageSize").selectedIndex].text;
-    const orientLabel = $("orientation").options[$("orientation").selectedIndex].text;
-    previewInfo.textContent = sizeLabel + " · " + orientLabel + " · " + Math.round(html.length/1024) + " KB";
-    log("Vista previa actualizada", "ok");
+    preview.srcdoc = job.html || "";
+    previewInfo.textContent = job.name + " · " + Math.round((job.html||"").length/1024) + " KB";
   }
+  ["pageSize","orientation"].forEach(id => $(id).addEventListener("change", () => {
+    pageShadow.className = pageShadowClasses();
+  }));
 
-  $("previewBtn").addEventListener("click", renderPreview);
-  htmlInput.addEventListener("input", debounce(renderPreview, 500));
-  $("pageSize").addEventListener("change", renderPreview);
-  $("orientation").addEventListener("change", renderPreview);
-
-  function debounce(fn, wait){
-    let t;
-    return function(){
-      clearTimeout(t);
-      t = setTimeout(fn, wait);
-    };
+  /* ---------- Utilidades de unidades ---------- */
+  function toMM(value, unit){
+    const v = parseFloat(value) || 0;
+    switch(unit){
+      case "mm": return v;
+      case "cm": return v * 10;
+      case "in": return v * 25.4;
+      case "px": return v * 25.4 / 96;
+      default: return v;
+    }
   }
-
   function parseMargins(){
+    const unit = $("marginUnit").value;
     const raw = $("margins").value.trim() || "15";
-    const parts = raw.split(",").map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+    const parts = raw.split(",").map(s => toMM(s.trim(), unit));
     if (parts.length === 1) return { top: parts[0], right: parts[0], bottom: parts[0], left: parts[0] };
     if (parts.length === 4) return { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
     return { top: 15, right: 15, bottom: 15, left: 15 };
   }
+  function pxToMM(px){ return px * 25.4 / 96; }
+  function mmToPx(mm){ return mm * 96 / 25.4; }
 
-  function cssPageSize(){
-    const size = $("pageSize").value;
-    const map = { a4: "A4", letter: "Letter", legal: "Legal" };
-    const orient = $("orientation").value;
-    return map[size] + (orient === "landscape" ? " landscape" : "");
-  }
-
-  // ---------------- Generación: método nativo (impresión) ----------------
-  function generateNative(){
-    const html = htmlInput.value;
-    if (!html.trim()){ log("No hay contenido HTML para convertir", "err"); return; }
-
-    const m = parseMargins();
-    const pageCss = `
-      @page { size: ${cssPageSize()}; margin: ${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm; }
-      @media print {
-        html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      }
-    `;
-
-    const printFrame = document.createElement("iframe");
-    printFrame.style.position = "fixed";
-    printFrame.style.right = "0";
-    printFrame.style.bottom = "0";
-    printFrame.style.width = "0";
-    printFrame.style.height = "0";
-    printFrame.style.border = "0";
-    document.body.appendChild(printFrame);
-
-    const doc = printFrame.contentWindow.document;
-    doc.open();
-    doc.write(html);
-    doc.close();
-
-    // Inyectar la regla @page tras cargar, para no chocar con el <head> original
-    const styleTag = doc.createElement("style");
-    styleTag.textContent = pageCss;
-    doc.head.appendChild(styleTag);
-
-    log("Preparando documento para impresión…");
-    setStatus("generando…");
-
-    // Esperar a que carguen imágenes/fuentes antes de imprimir
-    const waitReady = () => {
-      const win = printFrame.contentWindow;
-      win.focus();
-      setTimeout(() => {
-        try{
-          win.print();
-          log('Diálogo de impresión abierto. Selecciona "Guardar como PDF" como destino.', "ok");
-          setStatus("listo");
-        }catch(err){
-          log("Error al invocar la impresión: " + err.message, "err");
-          setStatus("error", false);
-        }
-        setTimeout(() => document.body.removeChild(printFrame), 1000);
-      }, 300);
-    };
-
-    if (doc.readyState === "complete"){
-      waitReady();
-    } else {
-      printFrame.onload = waitReady;
-      setTimeout(waitReady, 1200); // salvaguarda si onload no dispara
+  async function fetchUrlJob(job){
+    log("Descargando " + job.name + " …");
+    try{
+      const res = await fetch(job.name, { mode: "cors" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      job.html = await res.text();
+      log("Descarga OK: " + job.name, "ok");
+      return true;
+    }catch(err){
+      job.status = "error";
+      job.error = "CORS/red: " + err.message;
+      log('Fallo al descargar "' + job.name + '" (probable bloqueo CORS): ' + err.message, "err");
+      return false;
     }
   }
 
-  // ---------------- Generación: método canvas (html2pdf.js) ----------------
-  function generateCanvas(){
-    const html = htmlInput.value;
-    if (!html.trim()){ log("No hay contenido HTML para convertir", "err"); return; }
-    if (typeof html2pdf === "undefined"){
-      log("No se pudo cargar html2pdf.js (¿sin conexión a la CDN?)", "err");
+  /* ---------- Construcción del documento oculto para renderizar ---------- */
+  function buildHiddenDoc(html, widthPx){
+    const wrap = document.createElement("div");
+    wrap.style.position = "fixed";
+    wrap.style.left = "-99999px";
+    wrap.style.top = "0";
+    const iframe = document.createElement("iframe");
+    iframe.style.width = widthPx + "px";
+    iframe.style.height = "10px";
+    iframe.style.border = "0";
+    wrap.appendChild(iframe);
+    document.body.appendChild(wrap);
+    const doc = iframe.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+    return { wrap, iframe, doc };
+  }
+
+  function applyHideSelector(doc){
+    const sel = $("hideSelector").value.trim();
+    if (!sel) return;
+    try{
+      const style = doc.createElement("style");
+      style.textContent = sel + " { display:none !important; }";
+      doc.head.appendChild(style);
+    }catch(e){ log("Selector CSS inválido, se ignora: " + e.message, "warn"); }
+  }
+
+  function applyCustomCss(doc){
+    const css = $("customCss").value.trim();
+    if (!css) return;
+    try{
+      const style = doc.createElement("style");
+      style.textContent = css;
+      doc.head.appendChild(style);
+    }catch(e){ log("No se pudo aplicar el CSS adicional: " + e.message, "warn"); }
+  }
+
+  function applyHeaderBanner(doc){
+    const text = $("headerText").value.trim();
+    if (!text) return;
+    const banner = doc.createElement("div");
+    banner.textContent = text;
+    banner.setAttribute("style",
+      "font-family:sans-serif;font-size:11px;color:#666;border-bottom:1px solid #ddd;" +
+      "padding:4px 0 8px;margin-bottom:10px;");
+    if (doc.body.firstChild) doc.body.insertBefore(banner, doc.body.firstChild);
+    else doc.body.appendChild(banner);
+  }
+
+  function applyWatermark(doc){
+    const text = $("watermarkText").value.trim();
+    if (!text) return;
+    const wm = doc.createElement("div");
+    wm.textContent = text;
+    wm.setAttribute("style",
+      "position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-32deg);" +
+      "font-family:sans-serif; font-weight:700; font-size:96px; color:rgba(120,120,120,0.14);" +
+      "white-space:nowrap; pointer-events:none; z-index:9999; user-select:none;");
+    doc.body.style.position = doc.body.style.position || "relative";
+    doc.body.appendChild(wm);
+  }
+
+  function applyPrintCssAsScreen(doc){
+    if (!$("usePrintCss").checked) return;
+    try{
+      const extra = [];
+      Array.from(doc.styleSheets).forEach(sheet => {
+        let rules;
+        try{ rules = sheet.cssRules; }catch(e){ return; }
+        if (!rules) return;
+        Array.from(rules).forEach(rule => {
+          if (rule.media && Array.from(rule.media).some(m => m.includes("print"))){
+            Array.from(rule.cssRules).forEach(inner => extra.push(inner.cssText));
+          }
+        });
+      });
+      if (extra.length){
+        const style = doc.createElement("style");
+        style.textContent = extra.join("\n");
+        doc.head.appendChild(style);
+      }
+    }catch(e){ /* hojas cross-origin no legibles: se ignora */ }
+  }
+
+  function stripMetadataFromDoc(doc){
+    if (!$("removeMetadata").checked) return;
+    doc.title = "";
+    ["author","generator","application-name","description"].forEach(name => {
+      doc.querySelectorAll('meta[name="' + name + '"]').forEach(m => m.parentNode.removeChild(m));
+    });
+  }
+
+  async function waitReady(iframeWindow, doc){
+    await new Promise(resolve => {
+      if (doc.readyState === "complete") return resolve();
+      iframeWindow.addEventListener("load", resolve, { once: true });
+      setTimeout(resolve, 1500);
+    });
+    try{ if (doc.fonts && doc.fonts.ready) await doc.fonts.ready; }catch(e){}
+    const delay = parseFloat($("initialDelay").value) || 0;
+    if (delay > 0) await new Promise(r => setTimeout(r, delay * 1000));
+  }
+
+  function prepareDoc(doc){
+    applyHideSelector(doc);
+    applyCustomCss(doc);
+    applyHeaderBanner(doc);
+    applyWatermark(doc);
+    stripMetadataFromDoc(doc);
+  }
+
+  const AVOID_SELECTOR = "h1,h2,h3,h4,h5,h6,table,tr,img,figure,li,blockquote,pre,.avoid-break";
+
+  function pageFormatMM(){
+    const size = $("pageSize").value;
+    const map = { a4:[210,297], a3:[297,420], a2:[420,594], letter:[215.9,279.4], legal:[215.9,355.6] };
+    if (size === "continuous") return null;
+    if (size === "custom") return [parseFloat($("customWidthMM").value)||210, parseFloat($("customHeightMM").value)||297];
+    let wh = map[size] || map.a4;
+    let w = wh[0], h = wh[1];
+    if ($("orientation").value === "landscape") { const t = w; w = h; h = t; }
+    return [w,h];
+  }
+
+  /* ---------- Modo 1: impresión nativa del navegador ---------- */
+  function generateNative(job){
+    return new Promise(async (resolve) => {
+      const html = job.html;
+      const built = buildHiddenDoc(html, 900);
+      const wrap = built.wrap, iframe = built.iframe, doc = built.doc;
+      prepareDoc(doc);
+      applyPrintCssAsScreen(doc);
+      await waitReady(iframe.contentWindow, doc);
+
+      const m = parseMargins();
+      let sizeRule;
+      const fmt = pageFormatMM();
+      const avoid = $("avoidBreaks").checked;
+      if (fmt){
+        sizeRule = fmt[0] + "mm " + fmt[1] + "mm";
+      } else {
+        const widthMM = parseFloat($("continuousWidthMM").value) || 210;
+        const contentHeightMM = pxToMM(doc.documentElement.scrollHeight || doc.body.scrollHeight || 1000);
+        sizeRule = widthMM + "mm " + Math.max(contentHeightMM + m.top + m.bottom, 50).toFixed(1) + "mm";
+      }
+      const style = doc.createElement("style");
+      style.textContent =
+        "@page { size: " + sizeRule + "; margin: " + m.top + "mm " + m.right + "mm " + m.bottom + "mm " + m.left + "mm; }" +
+        "@media print { html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }" +
+        (fmt && avoid ? (AVOID_SELECTOR + "{ break-inside: avoid; page-break-inside: avoid; } h1,h2,h3,h4,h5,h6{ break-after: avoid; page-break-after: avoid; }") : "");
+      doc.head.appendChild(style);
+
+      let finished = false;
+      const cleanup = () => {
+        if (finished) return;
+        finished = true;
+        setTimeout(() => { if (wrap.parentNode) document.body.removeChild(wrap); }, 300);
+        resolve(true);
+      };
+      iframe.contentWindow.addEventListener("afterprint", cleanup, { once: true });
+      setTimeout(cleanup, 8000);
+
+      log('Abriendo diálogo de impresión para "' + job.name + '"… selecciona "Guardar como PDF".', "ok");
+      iframe.contentWindow.focus();
+      try{ iframe.contentWindow.print(); }
+      catch(err){ log("Error al imprimir: " + err.message, "err"); cleanup(); }
+    });
+  }
+
+  /* ---------- Paginación inteligente para el modo canvas ---------- */
+  function computeBreakpointsPx(doc, pageHeightPx, totalHeightPx){
+    const els = Array.from(doc.querySelectorAll(AVOID_SELECTOR));
+    const rects = els.map(el => {
+      const r = el.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom };
+    }).filter(r => r.bottom > r.top).sort((a,b) => a.top - b.top);
+
+    const breakpoints = [0];
+    let cursor = 0;
+    let guard = 0;
+    while (cursor < totalHeightPx - 1 && guard < 500){
+      guard++;
+      let boundary = cursor + pageHeightPx;
+      if (boundary >= totalHeightPx){ breakpoints.push(totalHeightPx); break; }
+      const crossing = rects.find(r => r.top < boundary - 1 && r.bottom > boundary + 1 && r.top > cursor);
+      if (crossing) boundary = Math.max(crossing.top, cursor + pageHeightPx * 0.4);
+      breakpoints.push(boundary);
+      cursor = boundary;
+    }
+    if (breakpoints[breakpoints.length - 1] < totalHeightPx) breakpoints.push(totalHeightPx);
+    return breakpoints;
+  }
+
+  function addHeaderFooterToPdf(pdf, pageIndex, totalPages, pageWmm, pageHmm, m, job){
+    const headerText = $("headerText").value.trim();
+    const showFooter = $("showFooter").checked;
+    if (headerText){
+      pdf.setFontSize(8);
+      pdf.setTextColor(120);
+      pdf.text(headerText, m.left, Math.max(m.top / 2, 5));
+    }
+    if (showFooter){
+      const footerLabel = job.name + " · " + new Date().toLocaleDateString("es-ES");
+      const yPos = pageHmm - (m.bottom/2 > 4 ? m.bottom/2 : 4);
+      pdf.setFontSize(8);
+      pdf.setTextColor(140);
+      pdf.text(footerLabel, m.left, yPos);
+      pdf.text(String(pageIndex) + " / " + totalPages, pageWmm - m.right, yPos, { align: "right" });
+    }
+  }
+
+  function stripPdfMetadata(pdf){
+    if (!$("removeMetadata").checked) return;
+    try{
+      pdf.setProperties({ title: "", subject: "", author: "", keywords: "", creator: "" });
+    }catch(e){ /* algunas versiones no exponen setProperties */ }
+  }
+
+  /* Renderiza un job a un canvas de alta resolución y devuelve también sus dimensiones/puntos de corte */
+  async function renderJobToCanvas(job){
+    const widthPx = parseInt($("viewportWidth").value, 10) || 1024;
+    const built = buildHiddenDoc(job.html, widthPx);
+    const wrap = built.wrap, iframe = built.iframe, doc = built.doc;
+    prepareDoc(doc);
+    applyPrintCssAsScreen(doc);
+    await waitReady(iframe.contentWindow, doc);
+
+    const images = Array.from(doc.images || []);
+    await Promise.all(images.map(img => img.complete ? Promise.resolve() : new Promise(r => {
+      img.addEventListener("load", r, { once:true });
+      img.addEventListener("error", r, { once:true });
+      setTimeout(r, 2000);
+    })));
+
+    const totalHeightPx = doc.body.scrollHeight || doc.documentElement.scrollHeight || 1000;
+    const renderScale = 2;
+    const canvas = await html2canvas(doc.body, { scale: renderScale, useCORS: true, logging: false, windowWidth: widthPx, height: totalHeightPx, windowHeight: totalHeightPx });
+
+    const result = { canvas, doc, widthPx, totalHeightPx, renderScale };
+    document.body.removeChild(wrap);
+    return result;
+  }
+
+  /* Genera un objeto jsPDF (una o varias páginas) a partir de un canvas ya renderizado */
+  function canvasToPdfPages(rendered, job, pageIndexOffset, existingPdf){
+    const { canvas, doc, totalHeightPx, renderScale } = rendered;
+    const m = parseMargins();
+    const fmt = pageFormatMM();
+    const jspdfNS = window.jspdf;
+    let pdf = existingPdf || null;
+
+    if (!fmt){
+      /* Página continua: una sola página por documento, sin saltos */
+      const widthMM = parseFloat($("continuousWidthMM").value) || 210;
+      const contentWmm = widthMM - m.left - m.right;
+      const scalePxPerMM = canvas.width / contentWmm;
+      const contentHmm = canvas.height / scalePxPerMM;
+      const pageWmm = widthMM;
+      const pageHmm = contentHmm + m.top + m.bottom;
+
+      if (!pdf) pdf = new jspdfNS.jsPDF({ unit: "mm", format: [pageWmm, pageHmm], orientation: pageWmm > pageHmm ? "landscape" : "portrait" });
+      else pdf.addPage([pageWmm, pageHmm], pageWmm > pageHmm ? "landscape" : "portrait");
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      pdf.addImage(imgData, "JPEG", m.left, m.top, contentWmm, contentHmm);
+      addHeaderFooterToPdf(pdf, pageIndexOffset + 1, pageIndexOffset + 1, pageWmm, pageHmm, m, job);
+      return { pdf, pagesAdded: 1 };
+    }
+
+    /* Tamaño fijo: dividir en varias páginas usando puntos de corte inteligentes */
+    const pageWmm = fmt[0], pageHmm = fmt[1];
+    const contentWmm = pageWmm - m.left - m.right;
+    const contentHmm = pageHmm - m.top - m.bottom;
+    const scalePxPerMM = canvas.width / contentWmm;
+    const pageHeightPxDoc = contentHmm * (scalePxPerMM / renderScale);
+
+    const avoid = $("avoidBreaks").checked;
+    const breakpointsDoc = avoid
+      ? computeBreakpointsPx(doc, pageHeightPxDoc, totalHeightPx)
+      : (() => {
+          const bps = [0]; let c = 0;
+          while (c < totalHeightPx - 1){ const b = Math.min(c + pageHeightPxDoc, totalHeightPx); bps.push(b); c = b; }
+          return bps;
+        })();
+
+    const totalPages = breakpointsDoc.length - 1;
+    let pagesAdded = 0;
+    for (let i = 0; i < totalPages; i++){
+      const sliceTopCanvas = Math.round(breakpointsDoc[i] * renderScale);
+      const sliceBottomCanvas = Math.round(breakpointsDoc[i+1] * renderScale);
+      const sliceHeightCanvas = Math.max(1, sliceBottomCanvas - sliceTopCanvas);
+
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceHeightCanvas;
+      const ctx = sliceCanvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+      ctx.drawImage(canvas, 0, sliceTopCanvas, canvas.width, sliceHeightCanvas, 0, 0, canvas.width, sliceHeightCanvas);
+
+      if (!pdf) pdf = new jspdfNS.jsPDF({ unit: "mm", format: [pageWmm, pageHmm], orientation: pageWmm > pageHmm ? "landscape" : "portrait" });
+      else pdf.addPage([pageWmm, pageHmm], pageWmm > pageHmm ? "landscape" : "portrait");
+
+      const imgData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+      const sliceHmm = sliceHeightCanvas / scalePxPerMM;
+      pdf.addImage(imgData, "JPEG", m.left, m.top, contentWmm, sliceHmm);
+      addHeaderFooterToPdf(pdf, pageIndexOffset + i + 1, pageIndexOffset + totalPages, pageWmm, pageHmm, m, job);
+      pagesAdded++;
+    }
+    return { pdf, pagesAdded };
+  }
+
+  async function generateCanvas(job){
+    if (typeof html2canvas === "undefined" || !window.jspdf){
+      throw new Error("html2canvas/jsPDF no están disponibles (¿sin conexión a la CDN?)");
+    }
+    const rendered = await renderJobToCanvas(job);
+    const { pdf } = canvasToPdfPages(rendered, job, 0, null);
+    stripPdfMetadata(pdf);
+    const baseName = job.name.replace(/\.(html?|)$/i, "") || "documento";
+    const filename = baseName + ".pdf";
+    return { pdf, filename };
+  }
+
+  async function processMergedBatch(jobs){
+    let pdf = null;
+    let pageOffset = 0;
+    for (const job of jobs){
+      if (job.type === "url" && !job.html){
+        const ok = await fetchUrlJob(job);
+        if (!ok){ renderQueue(); continue; }
+      }
+      job.status = "processing"; renderQueue(); loadJobPreview(job);
+      try{
+        const rendered = await renderJobToCanvas(job);
+        const res = canvasToPdfPages(rendered, job, pageOffset, pdf);
+        pdf = res.pdf;
+        pageOffset += res.pagesAdded;
+        job.status = "done";
+        log('"' + job.name + '" añadido al PDF combinado', "ok");
+      }catch(err){
+        job.status = "error"; job.error = err.message;
+        log('Error al combinar "' + job.name + '": ' + err.message, "err");
+      }
+      renderQueue();
+    }
+    if (pdf){
+      stripPdfMetadata(pdf);
+      pdf.save("documentos-combinados.pdf");
+      log("PDF combinado descargado", "ok");
+    }
+  }
+
+  let lastZipBlobs = [];
+  $("downloadZipBtn").addEventListener("click", async () => {
+    if (!lastZipBlobs.length || typeof JSZip === "undefined") return;
+    const zip = new JSZip();
+    lastZipBlobs.forEach(item => zip.file(item.filename, item.blob));
+    const content = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement("a");
+    a.href = url; a.download = "documentos-pdf.zip";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  });
+
+  /* ---------- Botón principal: procesar cola ---------- */
+  $("processBtn").addEventListener("click", async () => {
+    if (!queue.length) return;
+    $("processBtn").disabled = true;
+    downloadZipBtn.style.display = "none";
+    setStatus("procesando lote…");
+    setProgress(0, queue.length);
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const merge = mode === "canvas" && $("mergeIntoOne").checked;
+    const zipOut = mode === "canvas" && $("outputZip").checked && !merge;
+
+    if (merge){
+      await processMergedBatch(queue.filter(j => j.status !== "done"));
+      setStatus("listo"); setProgress(queue.length, queue.length);
+      $("processBtn").disabled = queue.length === 0;
+      log("Lote combinado finalizado", "ok");
       return;
     }
 
-    const m = parseMargins();
-    const size = $("pageSize").value; // 'a4' | 'letter' | 'legal'
-    const orientation = $("orientation").value;
-    const filename = ($("filename").value.trim() || "documento.pdf");
+    lastZipBlobs = [];
+    let doneCount = 0;
+    for (const job of queue){
+      if (job.status === "done") { doneCount++; continue; }
+      job.status = "processing";
+      renderQueue();
+      loadJobPreview(job);
 
-    const container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.left = "-99999px";
-    container.style.top = "0";
-    const shadowFrame = document.createElement("iframe");
-    shadowFrame.style.width = (orientation === "landscape" ? "297mm" : "210mm");
-    shadowFrame.style.height = "10px";
-    shadowFrame.style.border = "0";
-    container.appendChild(shadowFrame);
-    document.body.appendChild(container);
+      if (job.type === "url" && !job.html){
+        const ok = await fetchUrlJob(job);
+        if (!ok){ renderQueue(); doneCount++; setProgress(doneCount, queue.length); continue; }
+      }
 
-    const doc = shadowFrame.contentWindow.document;
-    doc.open(); doc.write(html); doc.close();
+      try{
+        if (mode === "native"){
+          await generateNative(job);
+        } else {
+          const { pdf, filename } = await generateCanvas(job);
+          if (zipOut){
+            const blob = pdf.output("blob");
+            lastZipBlobs.push({ filename, blob });
+          } else {
+            pdf.save(filename);
+          }
+        }
+        job.status = "done";
+        log('"' + job.name + '" convertido correctamente', "ok");
+      }catch(err){
+        job.status = "error";
+        job.error = err.message;
+        log('Error al convertir "' + job.name + '": ' + err.message, "err");
+      }
+      doneCount++;
+      setProgress(doneCount, queue.length);
+      renderQueue();
+    }
 
-    log("Renderizando documento a canvas…");
-    setStatus("generando…");
+    if (zipOut && lastZipBlobs.length){
+      downloadZipBtn.style.display = "block";
+      log(lastZipBlobs.length + " PDF(s) listos para descargar en .zip", "ok");
+    }
 
-    setTimeout(() => {
-      const target = doc.body;
-      const opt = {
-        margin: [m.top, m.left, m.bottom, m.right],
-        filename: filename.endsWith(".pdf") ? filename : filename + ".pdf",
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: "mm", format: size === "letter" ? "letter" : size, orientation: orientation }
-      };
-
-      html2pdf().set(opt).from(target).save()
-        .then(() => {
-          log("PDF descargado: " + opt.filename, "ok");
-          setStatus("listo");
-        })
-        .catch(err => {
-          log("Error generando el PDF: " + err.message, "err");
-          setStatus("error", false);
-        })
-        .finally(() => document.body.removeChild(container));
-    }, 500);
-  }
-
-  $("generateBtn").addEventListener("click", () => {
-    const mode = document.querySelector('input[name="mode"]:checked').value;
-    if (mode === "native") generateNative();
-    else generateCanvas();
+    setStatus("listo");
+    $("processBtn").disabled = queue.length === 0;
+    log("Lote finalizado", "ok");
   });
 
-  // ---------------- Documento de ejemplo ----------------
-  const sample = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<style>
-  body{ font-family: Georgia, serif; color:#1a1a1a; padding: 20px 30px; }
-  h1{ font-size: 24px; border-bottom: 3px solid #2c7a5c; padding-bottom: 8px; }
-  h2{ font-size: 16px; color:#2c7a5c; margin-top: 28px; }
-  table{ width:100%; border-collapse: collapse; margin-top: 10px; }
-  th, td{ border: 1px solid #ccc; padding: 6px 10px; font-size: 13px; text-align:left; }
-  th{ background:#f0f4f2; }
-  .callout{ background:#f0f4f2; border-left: 4px solid #2c7a5c; padding: 10px 14px; margin: 16px 0; font-size: 13px; }
-  footer{ margin-top: 40px; font-size: 11px; color:#888; }
-</style>
-</head>
-<body>
-  <h1>Informe de ejemplo</h1>
-  <p>Este es un documento HTML de muestra. Sustitúyelo por tu propio contenido en el panel izquierdo.</p>
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+      if (!$("processBtn").disabled) $("processBtn").click();
+    }
+  });
 
-  <h2>Sección 1 — Resumen</h2>
-  <p>El motor de impresión nativo del navegador respeta fielmente estilos como tablas, colores de fondo, tipografías y saltos de página.</p>
+  /* ---------- Documento de ejemplo ---------- */
+  const sample = "<!DOCTYPE html><html lang=\"es\"><head><meta charset=\"UTF-8\">" +
+    "<style>" +
+    "body{ font-family: Georgia, serif; color:#1a1a1a; padding: 20px 30px; }" +
+    "h1{ font-size: 24px; border-bottom: 3px solid #8a6a24; padding-bottom: 8px; }" +
+    "h2{ font-size: 16px; color:#8a6a24; margin-top: 28px; }" +
+    "table{ width:100%; border-collapse: collapse; margin-top: 10px; }" +
+    "th, td{ border: 1px solid #ccc; padding: 6px 10px; font-size: 13px; text-align:left; }" +
+    "th{ background:#f4efe2; }" +
+    ".callout{ background:#f4efe2; border-left: 4px solid #8a6a24; padding: 10px 14px; margin: 16px 0; font-size: 13px; }" +
+    "@media print { .no-print { display:none; } }" +
+    "</style></head><body>" +
+    "<h1>Informe de ejemplo</h1>" +
+    "<p class=\"no-print\" style=\"color:#c00;\">Este párrafo se oculta si activas \"Aplicar reglas @media print\".</p>" +
+    "<p>Sustituye este contenido por tu propio HTML en el panel izquierdo, o añade varios documentos a la cola.</p>" +
+    "<div class=\"callout\">Los cuadros de aviso, colores y bordes se conservan tal cual en el PDF final.</div>" +
+    "<h2>Datos</h2>" +
+    "<table><tr><th>Elemento</th><th>Estado</th></tr>" +
+    "<tr><td>Segmentación de red</td><td>Conforme</td></tr>" +
+    "<tr><td>Registro de accesos</td><td>Pendiente</td></tr></table>" +
+    "</body></html>";
 
-  <div class="callout">Los cuadros de aviso, colores y bordes se conservan tal cual en el PDF final cuando usas el método nativo.</div>
-
-  <h2>Sección 2 — Datos</h2>
-  <table>
-    <tr><th>Elemento</th><th>Estado</th><th>Observaciones</th></tr>
-    <tr><td>Segmentación de red</td><td>Conforme</td><td>Revisado en auditoría interna</td></tr>
-    <tr><td>Registro de accesos</td><td>Pendiente</td><td>Requiere ajuste de retención</td></tr>
-  </table>
-
-  <footer>Generado con el conversor HTML → PDF</footer>
-</body>
-</html>`;
-
-  htmlInput.value = sample;
-  renderPreview();
-  log("Documento de ejemplo cargado. Sustitúyelo por tu propio HTML.", "ok");
+  loadPrefs();
+  refreshSizeFields();
+  pageShadow.className = pageShadowClasses();
+  applyZoom();
+  addJob("ejemplo.html", "paste", sample);
+  log("Documento de ejemplo añadido a la cola. Sustitúyelo o añade el tuyo.", "ok");
 })();
 </script>
-
 </body>
 </html>
