@@ -217,6 +217,8 @@
   .qi-status.processing{ background: rgba(224,121,61,0.15); color: var(--warn); }
   .qi-status.done{ background: var(--ok-bg); color: var(--accent); }
   .qi-status.error{ background: rgba(224,96,90,0.15); color: var(--danger); }
+  .queue-item.active-preview{ border-color: var(--accent); background: var(--ok-bg); }
+  .queue-item{ cursor:pointer; }
   .queue-empty{ font-size:12px; color: var(--text-dim); font-style:italic; padding: 6px 0; }
   .queue-counters{ font-size:11px; color:var(--text-dim); font-family:var(--mono); margin-top:4px; }
 
@@ -228,19 +230,29 @@
   .log div{ margin-bottom:3px; }
 
   .preview-wrap{ display:flex; flex-direction:column; background:#05070a; }
+  .preview-wrap.pv-fullscreen{ position:fixed; inset:0; z-index:999; }
   .preview-toolbar{
-    display:flex; align-items:center; justify-content:space-between; padding:12px 20px;
+    display:flex; align-items:center; justify-content:space-between; padding:10px 20px;
     border-bottom:1px solid var(--border); font-family: var(--mono); font-size:11.5px; color:var(--text-dim); gap: 10px; flex-wrap: wrap;
   }
+  .preview-toolbar-left{ display:flex; align-items:center; gap:12px; min-width:0; flex-wrap:wrap; }
+  .preview-toolbar-right{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .preview-stats{ color:var(--text-dim); white-space:nowrap; }
+  .view-toggle{ display:flex; background: var(--bg-panel); border:1px solid var(--border); border-radius:6px; padding:2px; gap:2px; }
+  .vt-btn{ background:transparent; border:none; color:var(--text-dim); font-family:var(--mono); font-size:11px; padding:5px 9px; border-radius:4px; cursor:pointer; }
+  .vt-btn.active{ background: var(--bg-panel-2); color: var(--text); }
+  .guides-toggle{ display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap; }
+  .guides-toggle input{ accent-color: var(--accent); }
   .zoom-controls{ display:flex; align-items:center; gap:4px; }
   .zoom-controls button{
     background: var(--bg-panel-2); border:1px solid var(--border); color:var(--text); width:22px; height:22px;
     border-radius:4px; cursor:pointer; font-size:12px; line-height:1;
   }
+  .zoom-controls button.wide{ width:auto; padding:0 7px; font-size:10.5px; font-family:var(--mono); }
   .zoom-controls span{ min-width:38px; text-align:center; display:inline-block; }
-  .preview-stage{ flex:1; display:flex; align-items:flex-start; justify-content:center; padding:26px; overflow:auto; }
+  .preview-stage{ flex:1; display:flex; align-items:flex-start; justify-content:center; padding:26px; overflow:auto; position:relative; }
   .page-shadow-outer{ transform-origin: top center; transition: transform .15s ease; }
-  .page-shadow{ background:white; box-shadow: 0 10px 40px rgba(0,0,0,0.55); width:210mm; min-height:297mm; max-width:100%; position:relative; }
+  .page-shadow{ background:white; box-shadow: 0 10px 40px rgba(0,0,0,0.55); width:210mm; min-height:297mm; max-width:100%; position:relative; overflow:hidden; }
   .page-shadow.a3{ width:297mm; min-height:420mm; }
   .page-shadow.a2{ width:420mm; min-height:594mm; }
   .page-shadow.letter{ width:215.9mm; min-height:279.4mm; }
@@ -248,7 +260,15 @@
   .page-shadow.continuous{ min-height: 150mm; }
   .page-shadow.custom{ min-height: 150mm; }
   .page-shadow.landscape{ width: auto; min-height: auto; }
-  iframe#preview{ width:100%; height:100%; min-height:297mm; border:none; display:block; }
+  iframe#preview{ border:none; display:block; background:#fff; position:relative; transform-origin: top left; }
+  .page-guides{ position:absolute; inset:0; pointer-events:none; z-index:5; display:none; }
+  .page-guide-line{ position:absolute; left:0; right:0; border-top:2px dashed var(--accent); }
+  .page-guide-label{ position:absolute; right:6px; top:2px; font-family:var(--mono); font-size:9px; color:var(--accent); background:rgba(255,255,255,.9); padding:1px 6px; border-radius:3px; white-space:nowrap; }
+  .source-view{
+    display:none; margin:0; padding:18px 20px; width:100%; height:100%; overflow:auto; box-sizing:border-box;
+    background: var(--bg-panel); color:var(--text); font-family: var(--mono); font-size:12px; line-height:1.6;
+  }
+  .source-view code{ font-family: inherit; white-space:pre-wrap; word-break:break-word; }
 
   footer{
     padding: 12px 26px; border-top:1px solid var(--border); font-size:11.5px; color:var(--text-dim);
@@ -277,7 +297,7 @@
 <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
 
 <div class="limits-bar">
-  <b>Diferencia con otros servicios:</b> esos servicios envían tu HTML a un navegador headless en su servidor. Esta página es 100% estática y hace todo el trabajo en tu propio navegador, nada sale de tu equipo, no hay límites de archivos por hora ni marcas de agua. Por defecto genera una <b>página continua sin saltos y elimina los metadatos que puede</b>, para reducir tu huella de datos aún más que un servicio en la nube.
+  <b>Diferencia con otros servicios:</b> esos servicios envían tu HTML a un navegador headless en su servidor. Esta página es 100% estática y hace todo el trabajo en tu propio navegador, nada sale de tu equipo, no hay límites de archivos por hora ni marcas de agua. Por defecto genera una <b>página continua sin saltos</b> y elimina los metadatos que puede, para reducir tu huella de datos aún más que un servicio en la nube.
 </div>
 
 <main>
@@ -520,24 +540,39 @@
     </div>
   </div>
 
-  <div class="preview-wrap">
+  <div class="preview-wrap" id="previewWrap">
     <div class="preview-toolbar">
-      <span id="previewInfo">Sin contenido cargado</span>
-      <div style="display:flex; align-items:center; gap:14px;">
-        <span>La vista previa es orientativa</span>
-        <div class="zoom-controls">
-          <button id="zoomOut" title="Alejar">−</button>
-          <span id="zoomLevel">100%</span>
-          <button id="zoomIn" title="Acercar">+</button>
+      <div class="preview-toolbar-left">
+        <div class="view-toggle" role="tablist" aria-label="Modo de vista previa">
+          <button class="vt-btn active" id="viewRendered" type="button">◱ Renderizado</button>
+          <button class="vt-btn" id="viewSource" type="button">⌨ Código fuente</button>
         </div>
+        <span id="previewInfo">Sin contenido cargado</span>
+        <span class="preview-stats" id="previewStats"></span>
+      </div>
+      <div class="preview-toolbar-right" id="renderToolControls">
+        <label class="guides-toggle" title="Muestra dónde caería cada salto de página en el PDF final">
+          <input type="checkbox" id="pageGuidesToggle" checked>
+          <span>Guías de página</span>
+        </label>
+        <div class="zoom-controls">
+          <button id="zoomOut" title="Alejar (−)">−</button>
+          <span id="zoomLevel">100%</span>
+          <button id="zoomIn" title="Acercar (+)">+</button>
+          <button class="wide" id="zoomFit" title="Ajustar al ancho disponible">ajustar</button>
+          <button class="wide" id="zoomReset" title="Restablecer zoom (0)">100%</button>
+        </div>
+        <button class="theme-toggle" id="fullscreenToggle" title="Pantalla completa" aria-label="Pantalla completa" style="width:28px;height:28px;font-size:12px;">⛶</button>
       </div>
     </div>
-    <div class="preview-stage">
+    <div class="preview-stage" id="previewStage">
       <div class="page-shadow-outer" id="pageShadowOuter">
         <div class="page-shadow" id="pageShadow">
           <iframe id="preview" title="Vista previa" sandbox="allow-same-origin allow-scripts"></iframe>
+          <div class="page-guides" id="pageGuides" aria-hidden="true"></div>
         </div>
       </div>
+      <pre class="source-view" id="sourceView"><code id="sourceCode" class="language-html"></code></pre>
     </div>
   </div>
 </main>
@@ -573,6 +608,40 @@
   function setProgress(done, total){
     const pct = total ? Math.round((done/total)*100) : 0;
     progressFill.style.width = pct + "%";
+  }
+
+  /* ---------- Utilidad: debounce (mejora de rendimiento) ---------- */
+  function debounce(fn, wait){
+    let t = null;
+    return function debounced(...args){
+      clearTimeout(t);
+      t = setTimeout(() => fn.apply(this, args), wait);
+    };
+  }
+
+  /* ---------- Carga diferida de highlight.js (solo si se abre "Código fuente") ---------- */
+  let hljsPromise = null;
+  function ensureHljs(){
+    if (window.hljs) return Promise.resolve();
+    if (hljsPromise) return hljsPromise;
+    hljsPromise = new Promise((resolve) => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css";
+      document.head.appendChild(link);
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js";
+      script.onload = () => {
+        const xmlLang = document.createElement("script");
+        xmlLang.src = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js";
+        xmlLang.onload = resolve;
+        xmlLang.onerror = resolve;
+        document.head.appendChild(xmlLang);
+      };
+      script.onerror = resolve;
+      document.head.appendChild(script);
+    });
+    return hljsPromise;
   }
 
   /* ---------- Preferencias persistentes (localStorage) ---------- */
@@ -765,43 +834,74 @@
   let queue = [];
   let uid = 0;
   let dragSourceId = null;
+  let activePreviewJobId = null;
 
+  function buildQueueRow(job){
+    const row = document.createElement("div");
+    row.className = "queue-item";
+    row.draggable = true;
+    row.dataset.id = job.id;
+    row.innerHTML =
+      '<button class="icon-btn drag-handle" title="Arrastrar para reordenar">⋮⋮</button>' +
+      '<span class="qi-name" title="' + escapeHtml(job.name) + '">' + escapeHtml(job.name) + '</span>' +
+      '<span class="qi-status ' + job.status + '">' + statusLabel(job.status) + '</span>' +
+      '<button class="icon-btn qi-remove" data-id="' + job.id + '" title="Quitar">✕</button>';
+    row.querySelector(".qi-remove").addEventListener("click", (e) => {
+      e.stopPropagation();
+      queue = queue.filter(j => j.id !== job.id);
+      renderQueue();
+    });
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".qi-remove") || e.target.closest(".drag-handle")) return;
+      loadJobPreview(job);
+    });
+    row.addEventListener("dragstart", () => { dragSourceId = job.id; row.classList.add("dragging"); });
+    row.addEventListener("dragend", () => row.classList.remove("dragging"));
+    row.addEventListener("dragover", (e) => e.preventDefault());
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (dragSourceId === null || dragSourceId === job.id) return;
+      const fromIdx = queue.findIndex(j => j.id === dragSourceId);
+      const toIdx = queue.findIndex(j => j.id === job.id);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = queue.splice(fromIdx, 1);
+      queue.splice(toIdx, 0, moved);
+      dragSourceId = null;
+      renderQueue();
+    });
+    return row;
+  }
+
+  function updateQueueRow(row, job){
+    const statusEl = row.querySelector(".qi-status");
+    if (statusEl){ statusEl.className = "qi-status " + job.status; statusEl.textContent = statusLabel(job.status); }
+    const nameEl = row.querySelector(".qi-name");
+    if (nameEl && nameEl.textContent !== job.name){ nameEl.textContent = job.name; nameEl.title = job.name; }
+    row.classList.toggle("active-preview", job.id === activePreviewJobId);
+  }
+
+  /* Reconciliación incremental: reutiliza los nodos existentes en vez de reconstruir
+     todo el DOM en cada cambio de estado (evita reflows innecesarios con colas grandes). */
   function renderQueue(){
     const el = $("queue");
-    el.innerHTML = "";
     if (!queue.length){
       el.innerHTML = '<div class="queue-empty">Sin documentos todavía</div>';
     } else {
+      if (!el.firstElementChild || !el.firstElementChild.dataset || !el.firstElementChild.dataset.id){
+        el.innerHTML = "";
+      }
+      const existingRows = new Map();
+      Array.from(el.children).forEach(row => { if (row.dataset && row.dataset.id) existingRows.set(row.dataset.id, row); });
+      const frag = document.createDocumentFragment();
       queue.forEach(job => {
-        const row = document.createElement("div");
-        row.className = "queue-item";
-        row.draggable = true;
-        row.dataset.id = job.id;
-        row.innerHTML =
-          '<button class="icon-btn drag-handle" title="Arrastrar para reordenar">⋮⋮</button>' +
-          '<span class="qi-name" title="' + escapeHtml(job.name) + '">' + escapeHtml(job.name) + '</span>' +
-          '<span class="qi-status ' + job.status + '">' + statusLabel(job.status) + '</span>' +
-          '<button class="icon-btn qi-remove" data-id="' + job.id + '" title="Quitar">✕</button>';
-        row.querySelector(".qi-remove").addEventListener("click", () => {
-          queue = queue.filter(j => j.id !== job.id);
-          renderQueue();
-        });
-        row.addEventListener("dragstart", () => { dragSourceId = job.id; row.classList.add("dragging"); });
-        row.addEventListener("dragend", () => row.classList.remove("dragging"));
-        row.addEventListener("dragover", (e) => e.preventDefault());
-        row.addEventListener("drop", (e) => {
-          e.preventDefault();
-          if (dragSourceId === null || dragSourceId === job.id) return;
-          const fromIdx = queue.findIndex(j => j.id === dragSourceId);
-          const toIdx = queue.findIndex(j => j.id === job.id);
-          if (fromIdx === -1 || toIdx === -1) return;
-          const [moved] = queue.splice(fromIdx, 1);
-          queue.splice(toIdx, 0, moved);
-          dragSourceId = null;
-          renderQueue();
-        });
-        el.appendChild(row);
+        const idStr = String(job.id);
+        let row = existingRows.get(idStr);
+        if (row){ existingRows.delete(idStr); updateQueueRow(row, job); }
+        else { row = buildQueueRow(job); row.classList.toggle("active-preview", job.id === activePreviewJobId); }
+        frag.appendChild(row);
       });
+      existingRows.forEach(row => row.remove());
+      el.appendChild(frag);
     }
     $("queueCount").textContent = queue.length;
     $("processBtn").textContent = "Procesar cola (" + queue.length + ")";
@@ -827,9 +927,14 @@
   $("clearQueueBtn").addEventListener("click", () => {
     if (!queue.length) return;
     queue = [];
+    activePreviewJobId = null;
     renderQueue();
+    activePreview = { name: "", html: "" };
     previewInfo.textContent = "Sin contenido cargado";
+    $("previewStats").textContent = "";
     preview.srcdoc = "";
+    $("pageGuides").innerHTML = "";
+    if (currentView === "source") renderSourceView();
     log("Cola vaciada", "warn");
   });
 
@@ -917,15 +1022,29 @@
     $("urlListInput").value = "";
   });
 
-  /* ---------- Vista previa + zoom ---------- */
+  /* ---------- Visor de HTML: renderizado a escala real + código fuente + guías de página ---------- */
   const preview = $("preview"), pageShadow = $("pageShadow"), previewInfo = $("previewInfo"), pageShadowOuter = $("pageShadowOuter");
+  const previewStage = $("previewStage"), previewWrap = $("previewWrap");
+  const sourceView = $("sourceView"), sourceCode = $("sourceCode");
+  const viewRendered = $("viewRendered"), viewSource = $("viewSource"), renderToolControls = $("renderToolControls");
+  const pageGuidesEl = $("pageGuides");
   let zoom = 1;
+  let currentView = "rendered";
+  let activePreview = { name: "", html: "" };
+
   function applyZoom(){
     pageShadowOuter.style.transform = "scale(" + zoom + ")";
     $("zoomLevel").textContent = Math.round(zoom * 100) + "%";
   }
-  $("zoomIn").addEventListener("click", () => { zoom = Math.min(1.5, zoom + 0.1); applyZoom(); });
-  $("zoomOut").addEventListener("click", () => { zoom = Math.max(0.4, zoom - 0.1); applyZoom(); });
+  $("zoomIn").addEventListener("click", () => { zoom = Math.min(2.5, zoom + 0.1); applyZoom(); });
+  $("zoomOut").addEventListener("click", () => { zoom = Math.max(0.3, zoom - 0.1); applyZoom(); });
+  $("zoomReset").addEventListener("click", () => { zoom = 1; applyZoom(); });
+  $("zoomFit").addEventListener("click", () => {
+    const stageWidth = previewStage.clientWidth - 52;
+    const naturalWidth = pageShadow.clientWidth || 1;
+    zoom = Math.max(0.3, Math.min(2.5, stageWidth / naturalWidth));
+    applyZoom();
+  });
 
   function pageShadowClasses(){
     const size = $("pageSize").value, orientation = $("orientation").value;
@@ -934,19 +1053,185 @@
     if (orientation === "landscape" && size !== "continuous" && size !== "custom") cls += " landscape";
     return cls;
   }
-  function loadJobPreview(job){
+
+  /* Vista "Renderizado" vs "Código fuente" */
+  function setPreviewView(view){
+    currentView = view;
+    viewRendered.classList.toggle("active", view === "rendered");
+    viewSource.classList.toggle("active", view === "source");
+    pageShadowOuter.style.display = view === "rendered" ? "" : "none";
+    renderToolControls.style.display = view === "rendered" ? "flex" : "none";
+    sourceView.style.display = view === "source" ? "block" : "none";
+    if (view === "source") ensureHljs().finally(renderSourceView);
+  }
+  viewRendered.addEventListener("click", () => setPreviewView("rendered"));
+  viewSource.addEventListener("click", () => setPreviewView("source"));
+
+  function renderSourceView(){
+    sourceCode.textContent = activePreview.html || "// Sin contenido para mostrar todavía";
+    if (window.hljs){
+      sourceCode.className = "language-html hljs";
+      sourceCode.removeAttribute("data-highlighted");
+      try{ hljs.highlightElement(sourceCode); }catch(e){}
+    }
+  }
+
+  /* Muestra un documento en el visor (proviene de la cola o de un borrador en vivo) */
+  function showPreview(name, html){
+    activePreview = { name, html: html || "" };
     pageShadow.className = pageShadowClasses();
+    preview.srcdoc = activePreview.html;
+    previewInfo.textContent = name;
+    if (currentView === "source") renderSourceView();
+  }
+
+  function loadJobPreview(job){
+    activePreviewJobId = job.id;
+    renderQueue();
     if (job.type === "url" && !job.html){
+      pageShadow.className = pageShadowClasses();
+      activePreview = { name: job.name, html: "" };
       previewInfo.textContent = job.name + " (se cargará al procesar)";
+      $("previewStats").textContent = "";
       preview.srcdoc = "<body style='font-family:sans-serif;color:#999;padding:40px;'>URL pendiente de carga</body>";
+      pageGuidesEl.innerHTML = "";
+      if (currentView === "source") renderSourceView();
       return;
     }
-    preview.srcdoc = job.html || "";
-    previewInfo.textContent = job.name + " · " + Math.round((job.html||"").length/1024) + " KB";
+    showPreview(job.name, job.html);
   }
   ["pageSize","orientation"].forEach(id => $(id).addEventListener("change", () => {
     pageShadow.className = pageShadowClasses();
   }));
+
+  /* Borrador en vivo: si el usuario está escribiendo en "Código", se previsualiza sin necesidad de añadirlo a la cola */
+  const liveDraftPreview = debounce(() => {
+    if (!$("tabPaste").classList.contains("active")) return;
+    const val = $("pasteInput").value;
+    if (!val.trim()) return;
+    activePreviewJobId = null;
+    renderQueue();
+    showPreview("Borrador en vivo (aún no añadido a la cola) · " + Math.round(val.length/1024) + " KB", val);
+  }, 350);
+  $("pasteInput").addEventListener("input", liveDraftPreview);
+
+  /* Al abrir cada documento, decoramos el iframe igual que en la generación final
+     (CSS adicional, selector oculto, reglas @media print, encabezado, marca de agua)
+     para que la vista previa sea fiel al PDF resultante. */
+  function decoratePreviewDoc(){
+    try{
+      const doc = preview.contentDocument;
+      if (!doc || !doc.body) return;
+      applyHideSelector(doc);
+      applyCustomCss(doc);
+      applyPrintCssAsScreen(doc);
+      applyHeaderBanner(doc);
+      applyWatermark(doc);
+    }catch(e){ /* iframe no accesible todavía: se ignora */ }
+    refreshPreviewLayout();
+  }
+  preview.addEventListener("load", decoratePreviewDoc);
+
+  /* Escala el iframe al ancho de renderizado configurado (viewportWidth) y lo ajusta
+     visualmente al ancho de página real — así lo que ves es fiel a lo que generará el PDF. */
+  function refreshPreviewLayout(){
+    const doc = preview.contentDocument;
+    if (!doc || !doc.body){ pageGuidesEl.style.display = "none"; return; }
+    const widthPx = parseInt($("viewportWidth").value, 10) || 1024;
+    const shadowWidthPx = pageShadow.clientWidth || 794;
+    const scale = shadowWidthPx / widthPx;
+
+    preview.style.width = widthPx + "px";
+    preview.style.transform = "scale(" + scale + ")";
+
+    const contentHeightPx = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight, 50);
+    preview.style.height = contentHeightPx + "px";
+    pageShadow.style.height = Math.max(contentHeightPx * scale, 60) + "px";
+
+    drawPageGuides(doc, { widthPx, scale, contentHeightPx });
+    updatePreviewStats(doc);
+  }
+
+  /* Dibuja líneas de corte reutilizando el mismo algoritmo de paginación que usa la
+     exportación final, para que las guías coincidan exactamente con el PDF generado. */
+  function drawPageGuides(doc, ctx){
+    pageGuidesEl.innerHTML = "";
+    if (!$("pageGuidesToggle").checked){ pageGuidesEl.style.display = "none"; return; }
+    const fmt = pageFormatMM();
+    if (!fmt){ pageGuidesEl.style.display = "none"; return; }
+    let m, contentWmm, contentHmm, pageHeightPxDoc, breakpoints;
+    try{
+      m = parseMargins();
+      contentWmm = fmt[0] - m.left - m.right;
+      contentHmm = fmt[1] - m.top - m.bottom;
+      const pxPerMmDoc = ctx.widthPx / contentWmm;
+      pageHeightPxDoc = contentHmm * pxPerMmDoc;
+      const avoid = $("avoidBreaks").checked;
+      breakpoints = avoid
+        ? computeBreakpointsPx(doc, pageHeightPxDoc, ctx.contentHeightPx)
+        : (() => { const bps=[0]; let c=0; while(c<ctx.contentHeightPx-1){ const b=Math.min(c+pageHeightPxDoc, ctx.contentHeightPx); bps.push(b); c=b; } return bps; })();
+    }catch(e){ pageGuidesEl.style.display = "none"; return; }
+
+    pageGuidesEl.style.display = "block";
+    const totalPages = Math.max(1, breakpoints.length - 1);
+    for (let i = 1; i < breakpoints.length - 1; i++){
+      const line = document.createElement("div");
+      line.className = "page-guide-line";
+      line.style.top = (breakpoints[i] * ctx.scale) + "px";
+      const label = document.createElement("span");
+      label.className = "page-guide-label";
+      label.textContent = "página " + (i + 1) + " / " + totalPages;
+      line.appendChild(label);
+      pageGuidesEl.appendChild(line);
+    }
+  }
+
+  function updatePreviewStats(doc){
+    try{
+      const text = doc.body.innerText || doc.body.textContent || "";
+      const words = (text.trim().match(/\S+/g) || []).length;
+      const elements = doc.body.querySelectorAll("*").length;
+      $("previewStats").textContent = words + " palabras · " + elements + " elementos";
+    }catch(e){ $("previewStats").textContent = ""; }
+  }
+
+  /* Ajustes que exigen volver a cargar el documento decorado (afectan al contenido) */
+  const RELOAD_TRIGGERS = ["customCss","hideSelector","usePrintCss","headerText","watermarkText"];
+  /* Ajustes que solo exigen recalcular la escala/las guías (no cambian el contenido) */
+  const RELAYOUT_TRIGGERS = ["viewportWidth","pageSize","orientation","continuousWidthMM","customWidthMM","customHeightMM","margins","marginUnit","avoidBreaks","pageGuidesToggle"];
+
+  const debouncedReloadPreview = debounce(() => {
+    if (preview.srcdoc !== undefined && activePreview.html) preview.srcdoc = activePreview.html;
+  }, 300);
+  const debouncedRelayout = debounce(() => {
+    pageShadow.className = pageShadowClasses();
+    refreshPreviewLayout();
+  }, 120);
+
+  document.addEventListener("input", (e) => {
+    if (RELOAD_TRIGGERS.includes(e.target.id)) debouncedReloadPreview();
+  });
+  document.addEventListener("change", (e) => {
+    if (RELOAD_TRIGGERS.includes(e.target.id)) debouncedReloadPreview();
+    if (RELAYOUT_TRIGGERS.includes(e.target.id)) debouncedRelayout();
+  });
+  $("pageGuidesToggle").addEventListener("change", () => refreshPreviewLayout());
+
+  const debouncedWindowRelayout = debounce(refreshPreviewLayout, 150);
+  window.addEventListener("resize", debouncedWindowRelayout);
+
+  /* Pantalla completa del visor */
+  const fullscreenToggle = $("fullscreenToggle");
+  function exitFullscreen(){
+    previewWrap.classList.remove("pv-fullscreen");
+    fullscreenToggle.textContent = "⛶";
+    requestAnimationFrame(refreshPreviewLayout);
+  }
+  fullscreenToggle.addEventListener("click", () => {
+    const on = previewWrap.classList.toggle("pv-fullscreen");
+    fullscreenToggle.textContent = on ? "⤡" : "⛶";
+    requestAnimationFrame(refreshPreviewLayout);
+  });
 
   /* ---------- Utilidades de unidades ---------- */
   function toMM(value, unit){
@@ -1422,7 +1707,18 @@
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){
       if (!$("processBtn").disabled) $("processBtn").click();
+      return;
     }
+    if (e.key === "Escape" && previewWrap.classList.contains("pv-fullscreen")){
+      exitFullscreen();
+      return;
+    }
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+    if (currentView !== "rendered") return;
+    if (e.key === "+" || e.key === "="){ zoom = Math.min(2.5, zoom + 0.1); applyZoom(); }
+    else if (e.key === "-" || e.key === "_"){ zoom = Math.max(0.3, zoom - 0.1); applyZoom(); }
+    else if (e.key === "0"){ zoom = 1; applyZoom(); }
   });
 
   /* ---------- Documento de ejemplo ---------- */
