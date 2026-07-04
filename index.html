@@ -7,6 +7,25 @@
 <meta name="description" content="Convierte HTML a PDF por lotes, en local, sin servidor. Página continua sin saltos, eliminación de metadatos, marca de agua y combinación de documentos.">
 <style>
   :root{
+    /* Tema claro "documento certificado" — por defecto */
+    --bg: #f6f4ee;
+    --bg-panel: #ffffff;
+    --bg-panel-2: #f1eee4;
+    --border: #e1dccb;
+    --text: #211d14;
+    --text-dim: #74705f;
+    --accent: #a9761f;
+    --accent-dim: #d9c69a;
+    --accent2: #2f6fd6;
+    --accent2-dim: #b9cff2;
+    --warn: #b3591c;
+    --danger: #b23a34;
+    --ok-bg: rgba(169,118,31,0.09);
+    --mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --radius: 7px;
+  }
+  :root[data-theme="dark"]{
     --bg: #0a0d12;
     --bg-panel: #12161d;
     --bg-panel-2: #171b23;
@@ -20,14 +39,19 @@
     --warn: #e0793d;
     --danger: #e0605a;
     --ok-bg: rgba(227,178,60,0.08);
-    --mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
-    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --radius: 7px;
   }
   *{ box-sizing: border-box; }
   *:focus-visible{ outline: 2px solid var(--accent); outline-offset: 2px; }
-  body{ margin:0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; }
+  html{ color-scheme: light dark; }
+  body{ margin:0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; line-height: 1.5; transition: background .2s, color .2s; }
   @media (prefers-reduced-motion: reduce){ *{ animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+  .theme-toggle{
+    background: var(--bg-panel-2); border:1px solid var(--border); color: var(--text);
+    border-radius: 999px; width:34px; height:34px; cursor:pointer; font-size:15px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .theme-toggle:hover{ border-color: var(--accent-dim); }
+  .header-actions{ display:flex; align-items:center; gap:10px; }
 
   header{
     border-bottom: 1px solid var(--border);
@@ -61,6 +85,44 @@
 
   .progress-track{ height:3px; background: var(--border); position:relative; overflow:hidden; }
   .progress-fill{ height:100%; width:0%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); transition: width .25s ease; }
+
+  .mode-switch{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px; }
+  .ms-btn{
+    background: var(--bg-panel); border:1.5px solid var(--border); border-radius: var(--radius);
+    padding:10px 12px; text-align:left; cursor:pointer; display:flex; flex-direction:column; gap:2px;
+  }
+  .ms-btn strong{ font-size:13px; color:var(--text); }
+  .ms-btn span{ font-size:11px; color:var(--text-dim); }
+  .ms-btn.active{ border-color: var(--accent); background: var(--ok-bg); }
+  .ms-btn.active strong{ color: var(--accent); }
+  .mode-hint{ font-size:11.5px; color:var(--text-dim); line-height:1.5; margin: 2px 0 4px; }
+
+  .queue-toolbar{ display:flex; gap:8px; margin-top:6px; }
+  .queue-toolbar button{
+    flex:1; background: var(--bg-panel-2); border:1px solid var(--border); color:var(--text);
+    border-radius: var(--radius); padding:6px 8px; font-size:11px; cursor:pointer;
+  }
+  .queue-toolbar button:hover{ border-color: var(--accent-dim); }
+  .queue-toolbar button:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .history{ display:flex; flex-direction:column; gap:6px; max-height:170px; overflow-y:auto; }
+  .history-empty{ font-size:12px; color: var(--text-dim); font-style:italic; padding: 6px 0; }
+  .history-item{
+    display:flex; align-items:center; gap:8px; background: var(--bg-panel); border:1px solid var(--border);
+    border-radius: var(--radius); padding:7px 10px; font-size:11.5px;
+  }
+  .history-item .hi-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family: var(--mono); }
+  .history-item .hi-size{ color: var(--text-dim); font-family: var(--mono); font-size:10.5px; white-space:nowrap; }
+  .history-item a{ color: var(--accent2); text-decoration:none; font-size:11px; white-space:nowrap; }
+
+  .range-field{ display:flex; align-items:center; gap:10px; }
+  .range-field input[type="range"]{ flex:1; accent-color: var(--accent); }
+  .range-field .range-val{ font-family: var(--mono); font-size:11.5px; color: var(--text-dim); min-width:34px; text-align:right; }
+
+  .simple-note{
+    font-size:11.5px; color: var(--text-dim); background: var(--ok-bg); border:1px solid var(--accent-dim);
+    border-radius: var(--radius); padding:9px 11px; line-height:1.5; margin-top:8px;
+  }
 
   main{
     display:grid; grid-template-columns: 400px 1fr; min-height: calc(100vh - 130px);
@@ -206,7 +268,10 @@
       <p>Todo se procesa en tu navegador — nada se sube a ningún servidor</p>
     </div>
   </div>
-  <span class="status-pill" id="statusPill">● listo</span>
+  <div class="header-actions">
+    <span class="status-pill" id="statusPill">● listo</span>
+    <button class="theme-toggle" id="themeToggle" title="Cambiar tema claro/oscuro" aria-label="Cambiar tema">🌙</button>
+  </div>
 </header>
 
 <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
@@ -217,6 +282,20 @@
 
 <main>
   <div class="panel">
+
+    <div>
+      <div class="mode-switch">
+        <button class="ms-btn active" id="msSimple" data-mode="simple" type="button">
+          <strong>Modo simple</strong>
+          <span>Un clic, PDF listo</span>
+        </button>
+        <button class="ms-btn" id="msAdvanced" data-mode="advanced" type="button">
+          <strong>Modo avanzado</strong>
+          <span>Control total</span>
+        </button>
+      </div>
+      <p class="mode-hint" id="modeHint">Genera un PDF estándar, en una sola página continua, sin saltos ni metadatos. No necesitas tocar ningún ajuste.</p>
+    </div>
 
     <div>
       <p class="section-label">1. Añadir documentos a la cola</p>
@@ -251,8 +330,20 @@
         <div class="queue-empty">Sin documentos todavía</div>
       </div>
       <div class="queue-counters" id="queueCounters"></div>
+      <div class="queue-toolbar">
+        <button id="retryErrorsBtn" type="button" disabled>Reintentar errores</button>
+        <button id="clearQueueBtn" type="button" disabled>Vaciar cola</button>
+      </div>
     </div>
 
+    <div>
+      <p class="section-label">Historial de esta sesión</p>
+      <div class="history" id="history">
+        <div class="history-empty">Aún no has generado ningún PDF</div>
+      </div>
+    </div>
+
+    <div id="advancedSections">
     <div>
       <p class="section-label">2. Renderizado</p>
       <div class="row">
@@ -345,6 +436,16 @@
         </span>
       </label>
 
+      <div class="field">
+        <label>Plantilla rápida</label>
+        <select id="presetSelect">
+          <option value="none" selected>Ninguna (personalizar abajo)</option>
+          <option value="confidential">Confidencial · encabezado + pie</option>
+          <option value="draft">Borrador · marca de agua</option>
+          <option value="final">Versión final · solo pie con fecha</option>
+        </select>
+        <p class="section-hint" style="margin:2px 0 0;">Rellena los campos de abajo por ti; puedes editarlos después.</p>
+      </div>
       <label class="checkline">
         <input type="checkbox" id="showFooter">
         <span>Mostrar nombre/URL y fecha al pie de página</span>
@@ -397,10 +498,20 @@
           <input type="checkbox" id="outputZip">
           <span>Descargar todo en un .zip en vez de archivos sueltos</span>
         </label>
+        <div class="field">
+          <label>Calidad de imagen</label>
+          <div class="range-field">
+            <input type="range" id="imgQuality" min="0.5" max="1" step="0.05" value="0.95">
+            <span class="range-val" id="imgQualityVal">95%</span>
+          </div>
+          <p class="section-hint" style="margin:2px 0 0;">Más calidad = archivo más pesado. 90-95% es un buen equilibrio para la mayoría de documentos.</p>
+        </div>
       </div>
     </div>
+    </div><!-- /advancedSections -->
 
     <button class="primary" id="processBtn" disabled>Procesar cola (0)</button>
+    <p class="simple-note" id="simpleNote">Se descargará automáticamente en PDF, sin diálogos ni pasos intermedios: una sola página continua, sin metadatos.</p>
     <button class="secondary" id="downloadZipBtn" style="display:none;">Descargar resultados en .zip</button>
 
     <div>
@@ -467,11 +578,14 @@
 
   /* ---------- Preferencias persistentes (localStorage) ---------- */
   const PREF_KEY = "html2pdf_prefs_v1";
+  const THEME_KEY = "html2pdf_theme_v1";
   const PREF_IDS = ["viewportWidth","initialDelay","hideSelector","customCss","usePrintCss",
     "pageSize","orientation","continuousWidthMM","customWidthMM","customHeightMM","margins","marginUnit",
-    "avoidBreaks","showFooter","headerText","watermarkText","removeMetadata","mergeIntoOne","outputZip"];
+    "avoidBreaks","showFooter","headerText","watermarkText","removeMetadata","mergeIntoOne","outputZip","imgQuality"];
+  let suppressPrefSave = false;
 
   function savePrefs(){
+    if (suppressPrefSave) return;
     try{
       const data = {};
       PREF_IDS.forEach(id => {
@@ -502,6 +616,85 @@
     if (PREF_IDS.includes(e.target.id)) savePrefs();
   });
 
+  /* ---------- Tema claro/oscuro ---------- */
+  const themeToggle = $("themeToggle");
+  function applyTheme(theme){
+    if (theme === "dark"){ document.documentElement.setAttribute("data-theme", "dark"); themeToggle.textContent = "☀"; }
+    else { document.documentElement.removeAttribute("data-theme"); themeToggle.textContent = "🌙"; }
+  }
+  themeToggle.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+    const next = current === "dark" ? "light" : "dark";
+    applyTheme(next);
+    try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  });
+  (function initTheme(){
+    let saved = null;
+    try{ saved = localStorage.getItem(THEME_KEY); }catch(e){}
+    applyTheme(saved || "light");
+  })();
+
+  /* ---------- Modo simple / avanzado ---------- */
+  const msSimple = $("msSimple"), msAdvanced = $("msAdvanced"), advancedSections = $("advancedSections");
+  const modeHint = $("modeHint"), simpleNote = $("simpleNote");
+  let uiMode = "simple";
+  const SIMPLE_HINT = "Genera un PDF estándar, en una sola página continua, sin saltos ni metadatos. No necesitas tocar ningún ajuste.";
+  const ADVANCED_HINT = "Ajusta tamaño de página, márgenes, encabezado, marca de agua, metadatos y motor de conversión.";
+  function setUiMode(mode){
+    uiMode = mode;
+    msSimple.classList.toggle("active", mode === "simple");
+    msAdvanced.classList.toggle("active", mode === "advanced");
+    advancedSections.style.display = mode === "advanced" ? "block" : "none";
+    simpleNote.style.display = mode === "simple" ? "block" : "none";
+    modeHint.textContent = mode === "simple" ? SIMPLE_HINT : ADVANCED_HINT;
+  }
+  msSimple.addEventListener("click", () => setUiMode("simple"));
+  msAdvanced.addEventListener("click", () => setUiMode("advanced"));
+
+  function captureSettings(){
+    const s = {};
+    PREF_IDS.forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      s[id] = el.type === "checkbox" ? el.checked : el.value;
+    });
+    const modeRadio = document.querySelector('input[name="mode"]:checked');
+    s.mode = modeRadio ? modeRadio.value : "native";
+    return s;
+  }
+  function restoreSettings(s){
+    PREF_IDS.forEach(id => {
+      const el = $(id);
+      if (!el || !(id in s)) return;
+      if (el.type === "checkbox") el.checked = s[id];
+      else el.value = s[id];
+    });
+    if (s.mode === "native") cardNative.click(); else cardCanvas.click();
+    refreshSizeFields();
+    pageShadow.className = pageShadowClasses();
+    updateQualityLabel();
+  }
+  function forceSimpleSettings(){
+    $("pageSize").value = "continuous";
+    $("continuousWidthMM").value = "210";
+    $("margins").value = "15";
+    $("marginUnit").value = "mm";
+    $("removeMetadata").checked = true;
+    $("headerText").value = "";
+    $("watermarkText").value = "";
+    $("customCss").value = "";
+    $("hideSelector").value = "";
+    $("showFooter").checked = false;
+    $("usePrintCss").checked = true;
+    $("mergeIntoOne").checked = false;
+    $("outputZip").checked = false;
+    $("avoidBreaks").checked = true;
+    $("imgQuality").value = "0.95";
+    cardCanvas.click();
+    refreshSizeFields();
+    updateQualityLabel();
+  }
+
   /* ---------- Tabs ---------- */
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -528,6 +721,35 @@
   $("mergeIntoOne").addEventListener("change", () => {
     if ($("mergeIntoOne").checked){ $("outputZip").checked = false; $("outputZip").disabled = true; }
     else { $("outputZip").disabled = false; }
+  });
+
+  /* ---------- Calidad de imagen (modo automático) ---------- */
+  function updateQualityLabel(){
+    const v = parseFloat($("imgQuality").value) || 0.95;
+    $("imgQualityVal").textContent = Math.round(v * 100) + "%";
+  }
+  $("imgQuality").addEventListener("input", updateQualityLabel);
+
+  /* ---------- Plantillas rápidas ---------- */
+  $("presetSelect").addEventListener("change", () => {
+    const v = $("presetSelect").value;
+    if (v === "confidential"){
+      $("headerText").value = "Confidencial – uso interno";
+      $("showFooter").checked = true;
+      $("watermarkText").value = "";
+    } else if (v === "draft"){
+      $("watermarkText").value = "BORRADOR";
+      $("headerText").value = "";
+    } else if (v === "final"){
+      $("headerText").value = "";
+      $("watermarkText").value = "";
+      $("showFooter").checked = true;
+    } else {
+      $("headerText").value = "";
+      $("watermarkText").value = "";
+      $("showFooter").checked = false;
+    }
+    savePrefs();
   });
 
   /* ---------- Tamaño de página: mostrar/ocultar campos según selección ---------- */
@@ -588,12 +810,61 @@
     const done = queue.filter(j => j.status === "done").length;
     const err = queue.filter(j => j.status === "error").length;
     $("queueCounters").textContent = queue.length ? (done + " hechos · " + err + " con error · " + queue.length + " total") : "";
+    $("retryErrorsBtn").disabled = err === 0;
+    $("clearQueueBtn").disabled = queue.length === 0;
   }
   function statusLabel(s){
     return { pending:"pendiente", processing:"procesando", done:"hecho", error:"error" }[s] || s;
   }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  $("retryErrorsBtn").addEventListener("click", () => {
+    queue.filter(j => j.status === "error").forEach(j => { j.status = "pending"; j.error = null; });
+    renderQueue();
+    log("Documentos con error marcados como pendientes de nuevo", "ok");
+  });
+  $("clearQueueBtn").addEventListener("click", () => {
+    if (!queue.length) return;
+    queue = [];
+    renderQueue();
+    previewInfo.textContent = "Sin contenido cargado";
+    preview.srcdoc = "";
+    log("Cola vaciada", "warn");
+  });
+
+  /* ---------- Historial de descargas de esta sesión ---------- */
+  let history = [];
+  function renderHistory(){
+    const el = $("history");
+    el.innerHTML = "";
+    if (!history.length){
+      el.innerHTML = '<div class="history-empty">Aún no has generado ningún PDF</div>';
+      return;
+    }
+    history.slice().reverse().forEach(item => {
+      const row = document.createElement("div");
+      row.className = "history-item";
+      row.innerHTML =
+        '<span class="hi-name" title="' + escapeHtml(item.filename) + '">' + escapeHtml(item.filename) + '</span>' +
+        '<span class="hi-size">' + item.sizeLabel + '</span>' +
+        '<a href="' + item.url + '" download="' + escapeHtml(item.filename) + '">descargar</a>';
+      el.appendChild(row);
+    });
+  }
+  function formatBytes(bytes){
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024*1024) return Math.round(bytes/1024) + " KB";
+    return (bytes/(1024*1024)).toFixed(1) + " MB";
+  }
+  function triggerDownloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    history.push({ filename, url, sizeLabel: formatBytes(blob.size) });
+    renderHistory();
   }
 
   function addJob(name, type, html){
@@ -965,6 +1236,7 @@
     const m = parseMargins();
     const fmt = pageFormatMM();
     const jspdfNS = window.jspdf;
+    const quality = parseFloat($("imgQuality").value) || 0.95;
     let pdf = existingPdf || null;
 
     if (!fmt){
@@ -979,7 +1251,7 @@
       if (!pdf) pdf = new jspdfNS.jsPDF({ unit: "mm", format: [pageWmm, pageHmm], orientation: pageWmm > pageHmm ? "landscape" : "portrait" });
       else pdf.addPage([pageWmm, pageHmm], pageWmm > pageHmm ? "landscape" : "portrait");
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const imgData = canvas.toDataURL("image/jpeg", quality);
       pdf.addImage(imgData, "JPEG", m.left, m.top, contentWmm, contentHmm);
       addHeaderFooterToPdf(pdf, pageIndexOffset + 1, pageIndexOffset + 1, pageWmm, pageHmm, m, job);
       return { pdf, pagesAdded: 1 };
@@ -1019,7 +1291,7 @@
       if (!pdf) pdf = new jspdfNS.jsPDF({ unit: "mm", format: [pageWmm, pageHmm], orientation: pageWmm > pageHmm ? "landscape" : "portrait" });
       else pdf.addPage([pageWmm, pageHmm], pageWmm > pageHmm ? "landscape" : "portrait");
 
-      const imgData = sliceCanvas.toDataURL("image/jpeg", 0.95);
+      const imgData = sliceCanvas.toDataURL("image/jpeg", quality);
       const sliceHmm = sliceHeightCanvas / scalePxPerMM;
       pdf.addImage(imgData, "JPEG", m.left, m.top, contentWmm, sliceHmm);
       addHeaderFooterToPdf(pdf, pageIndexOffset + i + 1, pageIndexOffset + totalPages, pageWmm, pageHmm, m, job);
@@ -1064,7 +1336,7 @@
     }
     if (pdf){
       stripPdfMetadata(pdf);
-      pdf.save("documentos-combinados.pdf");
+      triggerDownloadBlob(pdf.output("blob"), "documentos-combinados.pdf");
       log("PDF combinado descargado", "ok");
     }
   }
