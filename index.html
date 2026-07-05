@@ -492,51 +492,87 @@
 
     <div>
       <p class="section-label">5. Método de conversión</p>
-      <label class="radio-card selected" id="cardNative">
-        <input type="radio" name="mode" value="native" checked>
+      <label class="radio-card selected" id="cardText">
+        <input type="radio" name="mode" value="text" checked>
         <div>
-          <div class="rc-title">Impresión nativa <span class="rc-badge rec">recomendado</span></div>
-          <div class="rc-desc">Motor de impresión real del navegador ("Guardar como PDF"). Máxima fidelidad tipográfica. Un documento a la vez.</div>
+          <div class="rc-title">Texto real <span class="rc-badge rec">recomendado · texto seleccionable</span></div>
+          <div class="rc-desc">Genera el PDF a partir del texto real del documento (no una imagen): seleccionable, buscable y con un peso de archivo mucho menor. Sin diálogos. Ideal para informes, artículos y documentación técnica. Diseños CSS muy complejos pueden simplificarse: si tu documento depende de un maquetado muy visual, usa "Impresión nativa".</div>
+        </div>
+      </label>
+      <label class="radio-card" id="cardNative" style="margin-top:8px;">
+        <input type="radio" name="mode" value="native">
+        <div>
+          <div class="rc-title">Impresión nativa <span class="rc-badge beta">máxima fidelidad visual</span></div>
+          <div class="rc-desc">Motor de impresión real del navegador ("Guardar como PDF"). También produce texto real de máxima calidad y conserva el CSS exacto, pero requiere confirmar el diálogo del navegador y procesa un documento a la vez.</div>
         </div>
       </label>
       <label class="radio-card" id="cardCanvas" style="margin-top:8px;">
         <input type="radio" name="mode" value="canvas">
         <div>
-          <div class="rc-title">Descarga automática <span class="rc-badge beta">sin diálogos</span></div>
-          <div class="rc-desc">Descarga directa sin diálogos, con numeración de página, encabezado/pie y opción de combinar todo en un único PDF o en un .zip.</div>
+          <div class="rc-title">Imagen (canvas) <span class="rc-badge beta">sin diálogos</span></div>
+          <div class="rc-desc">Descarga directa sin diálogos, pero el contenido se rasteriza como imagen (no es texto seleccionable) y pesa más. Útil solo si "Texto real" no reproduce bien un diseño muy visual.</div>
         </div>
       </label>
 
-      <div id="canvasExtras" style="display:none; margin-top:10px;">
+      <div id="batchExtras" style="display:block; margin-top:10px;">
         <label class="checkline">
           <input type="checkbox" id="mergeIntoOne">
           <span>Combinar todos los documentos en un único PDF
-            <span class="cl-desc">Cada documento ocupa una página continua propia dentro de un mismo archivo.</span>
+            <span class="cl-desc">Cada documento se añade como páginas propias dentro de un mismo archivo.</span>
           </span>
         </label>
         <label class="checkline">
           <input type="checkbox" id="outputZip">
           <span>Descargar todo en un .zip en vez de archivos sueltos</span>
         </label>
-        <div class="field">
-          <label>Calidad de imagen</label>
+        <div class="field" id="imgQualityField" style="display:none;">
+          <label>Calidad de imagen (modo imagen)</label>
           <div class="range-field">
             <input type="range" id="imgQuality" min="0.5" max="1" step="0.05" value="0.95">
             <span class="range-val" id="imgQualityVal">95%</span>
           </div>
-          <p class="section-hint" style="margin:2px 0 0;">Más calidad = archivo más pesado. 90-95% es un buen equilibrio para la mayoría de documentos.</p>
+          <p class="section-hint" style="margin:2px 0 0;">Más calidad = archivo más pesado. 90-95% es un buen equilibrio para la mayoría de documentos. Solo afecta al modo "Imagen (canvas)".</p>
         </div>
       </div>
     </div>
     </div><!-- /advancedSections -->
 
     <button class="primary" id="processBtn" disabled>Procesar cola (0)</button>
-    <p class="simple-note" id="simpleNote">Se descargará automáticamente en PDF, sin diálogos ni pasos intermedios: una sola página continua, sin metadatos.</p>
+    <p class="simple-note" id="simpleNote">Se descargará automáticamente en PDF con texto real seleccionable (no una imagen), sin diálogos ni pasos intermedios y sin metadatos.</p>
     <button class="secondary" id="downloadZipBtn" style="display:none;">Descargar resultados en .zip</button>
 
     <div>
       <p class="section-label">Registro</p>
       <div class="log" id="log"><div>Añade documentos a la cola para empezar. Atajo: <kbd>Ctrl</kbd>+<kbd>Enter</kbd> procesa la cola.</div></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border); margin-top:6px; padding-top:16px;">
+      <p class="section-label">Herramienta aparte: reducir tamaño de un PDF</p>
+      <p class="section-hint" style="margin-top:-4px;">Vuelve a comprimir un PDF ya existente (por ejemplo, uno pesado generado en modo "Imagen"). Redibuja cada página a la resolución elegida y la reguarda como JPEG comprimido. <b>Aviso:</b> el resultado deja de tener texto seleccionable, incluso si el original lo tenía; úsalo solo cuando el peso del archivo importe más que poder seleccionar el texto.</p>
+
+      <div class="dropzone" id="compressDropzone" tabindex="0" role="button" aria-label="Seleccionar archivos PDF a comprimir">
+        Arrastra uno o varios archivos .pdf<br>o haz clic para seleccionarlos
+        <input type="file" id="compressFileInput" accept=".pdf" multiple style="display:none;">
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label>Resolución de salida <span id="compressDpiVal">150 DPI</span></label>
+        <div class="range-field">
+          <input type="range" id="compressDpi" min="72" max="300" step="1" value="150">
+        </div>
+        <p class="section-hint" style="margin:2px 0 0;">72-100 DPI: máxima reducción, solo lectura en pantalla. 150 DPI: buen equilibrio. 200-300 DPI: apto para imprimir.</p>
+      </div>
+      <div class="field">
+        <label>Calidad JPEG <span id="compressQualityVal">70%</span></label>
+        <div class="range-field">
+          <input type="range" id="compressQuality" min="0.3" max="0.95" step="0.05" value="0.7">
+        </div>
+      </div>
+
+      <button class="add-btn" id="compressBtn" disabled>Comprimir PDF(s)</button>
+      <div class="history" id="compressResults" style="margin-top:10px;">
+        <div class="history-empty">Aún no has comprimido ningún PDF</div>
+      </div>
     </div>
   </div>
 
@@ -584,6 +620,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.12/vfs_fonts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-to-pdfmake@2.5.33/browser.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib){
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+</script>
 <script>
 (function(){
   "use strict";
@@ -678,6 +723,8 @@
         else el.value = data[id];
       });
       if (data.mode === "canvas"){ $("cardCanvas").click(); }
+      else if (data.mode === "native"){ $("cardNative").click(); }
+      else if (data.mode === "text"){ $("cardText").click(); }
     }catch(e){ /* preferencias corruptas o bloqueadas: se ignora */ }
   }
   document.addEventListener("change", (e) => {
@@ -727,7 +774,7 @@
       s[id] = el.type === "checkbox" ? el.checked : el.value;
     });
     const modeRadio = document.querySelector('input[name="mode"]:checked');
-    s.mode = modeRadio ? modeRadio.value : "native";
+    s.mode = modeRadio ? modeRadio.value : "text";
     return s;
   }
   function restoreSettings(s){
@@ -737,7 +784,9 @@
       if (el.type === "checkbox") el.checked = s[id];
       else el.value = s[id];
     });
-    if (s.mode === "native") cardNative.click(); else cardCanvas.click();
+    if (s.mode === "native") cardNative.click();
+    else if (s.mode === "canvas") cardCanvas.click();
+    else cardText.click();
     refreshSizeFields();
     pageShadow.className = pageShadowClasses();
     updateQualityLabel();
@@ -758,7 +807,7 @@
     $("outputZip").checked = false;
     $("avoidBreaks").checked = true;
     $("imgQuality").value = "0.95";
-    cardCanvas.click();
+    cardText.click();
     refreshSizeFields();
     updateQualityLabel();
   }
@@ -774,17 +823,19 @@
   });
 
   /* ---------- Modo de conversión ---------- */
-  const cardNative = $("cardNative"), cardCanvas = $("cardCanvas"), canvasExtras = $("canvasExtras");
+  const cardNative = $("cardNative"), cardCanvas = $("cardCanvas"), cardText = $("cardText"), batchExtras = $("batchExtras");
+  const imgQualityField = $("imgQualityField");
   const downloadZipBtn = $("downloadZipBtn");
   function selectMode(card){
-    cardNative.classList.toggle("selected", card === cardNative);
-    cardCanvas.classList.toggle("selected", card === cardCanvas);
+    [cardNative, cardCanvas, cardText].forEach(c => c.classList.toggle("selected", c === card));
     card.querySelector("input").checked = true;
-    canvasExtras.style.display = card === cardCanvas ? "block" : "none";
+    /* Combinar/zip están disponibles tanto en modo texto como en modo imagen (ambos sin diálogos) */
+    batchExtras.style.display = (card === cardCanvas || card === cardText) ? "block" : "none";
+    imgQualityField.style.display = (card === cardCanvas) ? "block" : "none";
     downloadZipBtn.style.display = "none";
     savePrefs();
   }
-  [cardNative, cardCanvas].forEach(card => card.addEventListener("click", () => selectMode(card)));
+  [cardNative, cardCanvas, cardText].forEach(card => card.addEventListener("click", () => selectMode(card)));
 
   $("mergeIntoOne").addEventListener("change", () => {
     if ($("mergeIntoOne").checked){ $("outputZip").checked = false; $("outputZip").disabled = true; }
@@ -1489,6 +1540,129 @@
     }catch(e){ /* algunas versiones no exponen setProperties */ }
   }
 
+  /* ---------- Modo 3: texto real (pdfMake + html-to-pdfmake) ---------- */
+  function mmToPt(mm){ return mm * 72 / 25.4; }
+
+  /* Construye el documento oculto solo con las transformaciones que deben influir en el TEXTO
+     (selector oculto, CSS extra, CSS de impresión, eliminación de metadatos). El encabezado,
+     el pie y la marca de agua NO se inyectan aquí como HTML: se generan como capas propias de
+     pdfMake para no mezclarse con el flujo de texto del documento. */
+  async function buildDocForText(job){
+    const widthPx = parseInt($("viewportWidth").value, 10) || 1024;
+    const built = buildHiddenDoc(job.html, widthPx);
+    const wrap = built.wrap, iframe = built.iframe, doc = built.doc;
+    applyHideSelector(doc);
+    applyCustomCss(doc);
+    stripMetadataFromDoc(doc);
+    applyPrintCssAsScreen(doc);
+    await waitReady(iframe.contentWindow, doc);
+    return { wrap, iframe, doc };
+  }
+
+  /* Convierte un job ya cargado a un array de contenido pdfMake (sin generar aún el PDF) */
+  async function jobToPdfmakeContent(job){
+    if (typeof htmlToPdfmake === "undefined" || !window.pdfMake){
+      throw new Error("pdfMake / html-to-pdfmake no están disponibles (¿sin conexión a la CDN?)");
+    }
+    const { wrap, iframe, doc } = await buildDocForText(job);
+    try{
+      return htmlToPdfmake(doc.body.innerHTML, { window: iframe.contentWindow });
+    } finally {
+      if (wrap.parentNode) document.body.removeChild(wrap);
+    }
+  }
+
+  /* Arma el docDefinition de pdfMake (tamaño de página, márgenes, encabezado, pie, marca de agua) */
+  function buildTextDocDefinition(content, footerLabel){
+    const m = parseMargins();
+    const fmt = pageFormatMM();
+    const headerText = $("headerText").value.trim();
+    const showFooter = $("showFooter").checked;
+    const watermarkText = $("watermarkText").value.trim();
+    const removeMeta = $("removeMetadata").checked;
+
+    const pageSize = fmt ? { width: mmToPt(fmt[0]), height: mmToPt(fmt[1]) } : "A4";
+    const topMargin = mmToPt(m.top) + (headerText ? 16 : 0);
+    const bottomMargin = mmToPt(m.bottom) + (showFooter ? 16 : 0);
+
+    const docDefinition = {
+      pageSize: pageSize,
+      pageOrientation: (fmt && fmt[0] > fmt[1]) ? "landscape" : "portrait",
+      pageMargins: [mmToPt(m.left), topMargin, mmToPt(m.right), bottomMargin],
+      content: content,
+      defaultStyle: { fontSize: 10, lineHeight: 1.25 },
+      compress: true
+    };
+    if (removeMeta) docDefinition.info = { title: "", author: "", subject: "", creator: "", producer: "" };
+    if (headerText){
+      docDefinition.header = function(){
+        return { text: headerText, fontSize: 8, color: "#777777", margin: [mmToPt(m.left), 10, mmToPt(m.right), 0] };
+      };
+    }
+    if (showFooter){
+      docDefinition.footer = function(currentPage, pageCount){
+        return {
+          columns: [
+            { text: footerLabel + " · " + new Date().toLocaleDateString("es-ES"), fontSize: 8, color: "#888888" },
+            { text: currentPage + " / " + pageCount, fontSize: 8, color: "#888888", alignment: "right" }
+          ],
+          margin: [mmToPt(m.left), 0, mmToPt(m.right), 0]
+        };
+      };
+    }
+    if (watermarkText){
+      docDefinition.watermark = { text: watermarkText, color: "#787878", opacity: 0.12, bold: true, fontSize: 90 };
+    }
+    return docDefinition;
+  }
+
+  function pdfDefToBlob(docDefinition){
+    return new Promise((resolve, reject) => {
+      try{
+        pdfMake.createPdf(docDefinition).getBlob(resolve);
+      }catch(err){ reject(err); }
+    });
+  }
+
+  /* Genera el PDF de texto real para un único job */
+  async function generateTextPdf(job){
+    const content = await jobToPdfmakeContent(job);
+    const docDefinition = buildTextDocDefinition(content, job.name);
+    const blob = await pdfDefToBlob(docDefinition);
+    const baseName = job.name.replace(/\.(html?|)$/i, "") || "documento";
+    return { blob, filename: baseName + ".pdf" };
+  }
+
+  /* Combina varios jobs en un único PDF de texto real, cada uno empezando en página nueva */
+  async function processTextMergedBatch(jobs){
+    let combinedContent = [];
+    let any = false;
+    for (const job of jobs){
+      if (job.type === "url" && !job.html){
+        const ok = await fetchUrlJob(job);
+        if (!ok){ renderQueue(); continue; }
+      }
+      job.status = "processing"; renderQueue(); loadJobPreview(job);
+      try{
+        const content = await jobToPdfmakeContent(job);
+        if (any && content.length) content[0] = Object.assign({}, content[0], { pageBreak: "before" });
+        combinedContent = combinedContent.concat(content);
+        any = true;
+        job.status = "done";
+        log('"' + job.name + '" añadido al PDF de texto combinado', "ok");
+      }catch(err){
+        job.status = "error"; job.error = err.message;
+        log('Error al combinar "' + job.name + '" (texto real): ' + err.message, "err");
+      }
+      renderQueue();
+    }
+    if (!combinedContent.length) return;
+    const docDefinition = buildTextDocDefinition(combinedContent, "documentos-combinados");
+    const blob = await pdfDefToBlob(docDefinition);
+    triggerDownloadBlob(blob, "documentos-combinados.pdf");
+    log("PDF de texto combinado descargado", "ok");
+  }
+
   /* Renderiza un job a un canvas de alta resolución y devuelve también sus dimensiones/puntos de corte */
   async function renderJobToCanvas(job){
     const widthPx = parseInt($("viewportWidth").value, 10) || 1024;
@@ -1506,7 +1680,8 @@
     })));
 
     const totalHeightPx = doc.body.scrollHeight || doc.documentElement.scrollHeight || 1000;
-    const renderScale = 2;
+    /* Escala de renderizado más alta = texto e imágenes más nítidos en el PDF resultante */
+    const renderScale = Math.max(2, Math.min(4, (window.devicePixelRatio || 1) * 2, 3));
     const canvas = await html2canvas(doc.body, { scale: renderScale, useCORS: true, logging: false, windowWidth: widthPx, height: totalHeightPx, windowHeight: totalHeightPx });
 
     const result = { canvas, doc, widthPx, totalHeightPx, renderScale };
@@ -1646,11 +1821,13 @@
     setStatus("procesando lote…");
     setProgress(0, queue.length);
     const mode = document.querySelector('input[name="mode"]:checked').value;
-    const merge = mode === "canvas" && $("mergeIntoOne").checked;
-    const zipOut = mode === "canvas" && $("outputZip").checked && !merge;
+    const isBatchMode = mode === "canvas" || mode === "text";
+    const merge = isBatchMode && $("mergeIntoOne").checked;
+    const zipOut = isBatchMode && $("outputZip").checked && !merge;
 
     if (merge){
-      await processMergedBatch(queue.filter(j => j.status !== "done"));
+      if (mode === "text") await processTextMergedBatch(queue.filter(j => j.status !== "done"));
+      else await processMergedBatch(queue.filter(j => j.status !== "done"));
       setStatus("listo"); setProgress(queue.length, queue.length);
       $("processBtn").disabled = queue.length === 0;
       log("Lote combinado finalizado", "ok");
@@ -1673,6 +1850,13 @@
       try{
         if (mode === "native"){
           await generateNative(job);
+        } else if (mode === "text"){
+          const { blob, filename } = await generateTextPdf(job);
+          if (zipOut){
+            lastZipBlobs.push({ filename, blob });
+          } else {
+            triggerDownloadBlob(blob, filename);
+          }
         } else {
           const { pdf, filename } = await generateCanvas(job);
           if (zipOut){
@@ -1703,6 +1887,131 @@
     $("processBtn").disabled = queue.length === 0;
     log("Lote finalizado", "ok");
   });
+
+  /* ---------- Herramienta aparte: reducir tamaño de un PDF existente ---------- */
+  (function initCompressTool(){
+    const dz = $("compressDropzone"), input = $("compressFileInput");
+    const dpiRange = $("compressDpi"), dpiVal = $("compressDpiVal");
+    const qRange = $("compressQuality"), qVal = $("compressQualityVal");
+    const btn = $("compressBtn"), resultsEl = $("compressResults");
+    let pending = [];
+    let results = [];
+
+    function updateLabels(){
+      dpiVal.textContent = dpiRange.value + " DPI";
+      qVal.textContent = Math.round(parseFloat(qRange.value) * 100) + "%";
+    }
+    dpiRange.addEventListener("input", updateLabels);
+    qRange.addEventListener("input", updateLabels);
+    updateLabels();
+
+    function refreshDzLabel(){
+      if (!pending.length){
+        dz.innerHTML = 'Arrastra uno o varios archivos .pdf<br>o haz clic para seleccionarlos<input type="file" id="compressFileInput" accept=".pdf" multiple style="display:none;">';
+        $("compressFileInput").addEventListener("change", onFilesPicked);
+      } else {
+        dz.textContent = pending.length + " archivo(s) PDF listo(s) para comprimir. Haz clic para añadir más.";
+      }
+      btn.disabled = pending.length === 0;
+    }
+
+    function onFilesPicked(){
+      const el = $("compressFileInput");
+      const files = Array.from(el.files || []).filter(f => /\.pdf$/i.test(f.name));
+      if (!files.length){ log("Selecciona archivos .pdf", "warn"); return; }
+      pending = pending.concat(files);
+      refreshDzLabel();
+    }
+
+    dz.addEventListener("click", () => $("compressFileInput").click());
+    dz.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " "){ e.preventDefault(); $("compressFileInput").click(); } });
+    dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("drag"); });
+    dz.addEventListener("dragleave", () => dz.classList.remove("drag"));
+    dz.addEventListener("drop", (e) => {
+      e.preventDefault(); dz.classList.remove("drag");
+      const files = Array.from(e.dataTransfer.files || []).filter(f => /\.pdf$/i.test(f.name));
+      if (!files.length){ log("Solo se aceptan archivos .pdf", "warn"); return; }
+      pending = pending.concat(files);
+      refreshDzLabel();
+    });
+    input.addEventListener("change", onFilesPicked);
+
+    function renderResults(){
+      resultsEl.innerHTML = "";
+      if (!results.length){
+        resultsEl.innerHTML = '<div class="history-empty">Aún no has comprimido ningún PDF</div>';
+        return;
+      }
+      results.slice().reverse().forEach(item => {
+        const row = document.createElement("div");
+        row.className = "history-item";
+        const pct = item.originalSize > 0 ? Math.round((1 - item.newSize / item.originalSize) * 100) : 0;
+        row.innerHTML =
+          '<span class="hi-name" title="' + escapeHtml(item.filename) + '">' + escapeHtml(item.filename) + '</span>' +
+          '<span class="hi-size">' + formatBytes(item.originalSize) + ' → ' + formatBytes(item.newSize) + ' (-' + pct + '%)</span>' +
+          '<a href="' + item.url + '" download="' + escapeHtml(item.filename) + '">descargar</a>';
+        resultsEl.appendChild(row);
+      });
+    }
+
+    async function compressOneFile(file, scale, quality){
+      if (typeof pdfjsLib === "undefined" || !window.jspdf){
+        throw new Error("pdf.js/jsPDF no están disponibles (¿sin conexión a la CDN?)");
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const jspdfNS = window.jspdf;
+      let outPdf = null;
+      for (let i = 1; i <= pdfDoc.numPages; i++){
+        const page = await pdfDoc.getPage(i);
+        const viewport = page.getViewport({ scale: scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(viewport.width));
+        canvas.height = Math.max(1, Math.round(viewport.height));
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const imgData = canvas.toDataURL("image/jpeg", quality);
+        const pageWmm = (viewport.width / scale) * 25.4 / 72;
+        const pageHmm = (viewport.height / scale) * 25.4 / 72;
+        const orientation = pageWmm > pageHmm ? "landscape" : "portrait";
+        if (!outPdf){
+          outPdf = new jspdfNS.jsPDF({ unit: "mm", format: [pageWmm, pageHmm], orientation });
+        } else {
+          outPdf.addPage([pageWmm, pageHmm], orientation);
+        }
+        outPdf.addImage(imgData, "JPEG", 0, 0, pageWmm, pageHmm);
+      }
+      try{ outPdf.setProperties({ title: "", subject: "", author: "", keywords: "", creator: "" }); }catch(e){}
+      return outPdf.output("blob");
+    }
+
+    btn.addEventListener("click", async () => {
+      if (!pending.length) return;
+      btn.disabled = true;
+      const scale = (parseFloat(dpiRange.value) || 150) / 72;
+      const quality = parseFloat(qRange.value) || 0.7;
+      const files = pending.slice();
+      pending = [];
+      refreshDzLabel();
+      for (const file of files){
+        log('Comprimiendo "' + file.name + '"…');
+        try{
+          const blob = await compressOneFile(file, scale, quality);
+          const url = URL.createObjectURL(blob);
+          results.push({ filename: file.name.replace(/\.pdf$/i, "") + "-comprimido.pdf", url, originalSize: file.size, newSize: blob.size });
+          renderResults();
+          log('"' + file.name + '" comprimido: ' + formatBytes(file.size) + ' → ' + formatBytes(blob.size), "ok");
+        }catch(err){
+          log('Error al comprimir "' + file.name + '": ' + err.message, "err");
+        }
+      }
+      btn.disabled = pending.length === 0;
+    });
+
+    refreshDzLabel();
+  })();
 
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter"){
