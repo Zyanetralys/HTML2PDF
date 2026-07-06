@@ -561,25 +561,32 @@
 
     <div>
       <p class="section-label">5. Método de conversión</p>
-      <label class="radio-card selected" id="cardText">
-        <input type="radio" name="mode" value="text" checked>
+      <label class="radio-card selected" id="cardExact">
+        <input type="radio" name="mode" value="exact" checked>
         <div>
-          <div class="rc-title">Texto real <span class="rc-badge rec">recomendado · texto seleccionable</span></div>
-          <div class="rc-desc">Genera el PDF a partir del texto real del documento (no una imagen): seleccionable, buscable y con un peso de archivo mucho menor. Sin diálogos. Ideal para informes, artículos y documentación técnica. Diseños CSS muy complejos pueden simplificarse: si tu documento depende de un maquetado muy visual, usa "Impresión nativa".</div>
+          <div class="rc-title">Texto + diseño exacto <span class="rc-badge rec">recomendado · fidelidad total</span></div>
+          <div class="rc-desc">La forma más fiel: el PDF se ve pixel a pixel igual que el HTML (colores, fondos, degradados, sombras, imágenes, maquetado complejo) porque por debajo es una imagen de alta resolución de cada página, pero además coloca una capa de texto real invisible encima, alineada con cada línea, para que el contenido siga siendo seleccionable y buscable con Ctrl+F. Sin diálogos. Es el modo con más cómputo, así que documentos muy largos tardan algo más.</div>
+        </div>
+      </label>
+      <label class="radio-card" id="cardText" style="margin-top:8px;">
+        <input type="radio" name="mode" value="text">
+        <div>
+          <div class="rc-title">Solo texto real <span class="rc-badge beta">peso mínimo</span></div>
+          <div class="rc-desc">Genera el PDF a partir del texto real del documento reconstruido como párrafos, tablas e imágenes sueltas (vía pdfMake), sin pasar por una imagen. El archivo pesa muy poco y el texto es nativo, pero <b>no reproduce fondos de color, degradados, sombras, bordes redondeados ni maquetados con posicionamiento/flexbox/grid</b> — ese es un límite del formato interno que usa esta conversión, no un fallo puntual. Úsalo solo para documentos de texto plano (informes, artículos) sin diseño visual relevante; si tu HTML tiene fondos, tarjetas de color o imágenes decorativas, usa "Texto + diseño exacto" o "Impresión nativa".</div>
         </div>
       </label>
       <label class="radio-card" id="cardNative" style="margin-top:8px;">
         <input type="radio" name="mode" value="native">
         <div>
-          <div class="rc-title">Impresión nativa <span class="rc-badge beta">máxima fidelidad visual</span></div>
-          <div class="rc-desc">Motor de impresión real del navegador ("Guardar como PDF"). También produce texto real de máxima calidad y conserva el CSS exacto, pero requiere confirmar el diálogo del navegador y procesa un documento a la vez.</div>
+          <div class="rc-title">Impresión nativa <span class="rc-badge beta">motor del navegador</span></div>
+          <div class="rc-desc">Motor de impresión real del navegador ("Guardar como PDF"). También produce texto real de máxima calidad y conserva el CSS exacto, pero requiere confirmar el diálogo del navegador y procesa un documento a la vez (no se puede combinar en lote sin intervención).</div>
         </div>
       </label>
       <label class="radio-card" id="cardCanvas" style="margin-top:8px;">
         <input type="radio" name="mode" value="canvas">
         <div>
           <div class="rc-title">Imagen (canvas) <span class="rc-badge beta">sin diálogos</span></div>
-          <div class="rc-desc">Descarga directa sin diálogos, pero el contenido se rasteriza como imagen (no es texto seleccionable) y pesa más. Útil solo si "Texto real" no reproduce bien un diseño muy visual.</div>
+          <div class="rc-desc">Igual que "Texto + diseño exacto" en fidelidad visual (rasteriza el diseño completo), pero sin la capa de texto seleccionable/buscable encima. Pesa lo mismo que el modo recomendado pero sin sus ventajas de accesibilidad, así que en general es preferible usar "Texto + diseño exacto" salvo que quieras el archivo más simple posible.</div>
         </div>
       </label>
 
@@ -600,14 +607,14 @@
             <input type="range" id="imgQuality" min="0.5" max="1" step="0.05" value="0.95">
             <span class="range-val" id="imgQualityVal">95%</span>
           </div>
-          <p class="section-hint" style="margin:2px 0 0;">Más calidad = archivo más pesado. 90-95% es un buen equilibrio para la mayoría de documentos. Solo afecta al modo "Imagen (canvas)".</p>
+          <p class="section-hint" style="margin:2px 0 0;">Más calidad = archivo más pesado. 90-95% es un buen equilibrio para la mayoría de documentos. Afecta a "Texto + diseño exacto" e "Imagen (canvas)".</p>
         </div>
       </div>
     </div>
     </div><!-- /advancedSections -->
 
     <button class="primary" id="processBtn" disabled>Procesar cola (0)</button>
-    <p class="simple-note" id="simpleNote">Se descargará automáticamente en PDF con texto real seleccionable (no una imagen), sin diálogos ni pasos intermedios y sin metadatos.</p>
+    <p class="simple-note" id="simpleNote">Se descargará automáticamente en PDF con el mismo aspecto exacto del HTML (colores, fondos e imágenes) y con texto seleccionable y buscable encima, sin diálogos ni pasos intermedios y sin metadatos.</p>
     <button class="secondary" id="downloadZipBtn" style="display:none;">Descargar resultados en .zip</button>
 
     <div>
@@ -795,6 +802,7 @@
       if (data.mode === "canvas"){ $("cardCanvas").click(); }
       else if (data.mode === "native"){ $("cardNative").click(); }
       else if (data.mode === "text"){ $("cardText").click(); }
+      else if (data.mode === "exact"){ $("cardExact").click(); }
     }catch(e){ /* preferencias corruptas o bloqueadas: se ignora */ }
   }
   document.addEventListener("change", (e) => {
@@ -844,7 +852,7 @@
       s[id] = el.type === "checkbox" ? el.checked : el.value;
     });
     const modeRadio = document.querySelector('input[name="mode"]:checked');
-    s.mode = modeRadio ? modeRadio.value : "text";
+    s.mode = modeRadio ? modeRadio.value : "exact";
     return s;
   }
   function restoreSettings(s){
@@ -856,7 +864,8 @@
     });
     if (s.mode === "native") cardNative.click();
     else if (s.mode === "canvas") cardCanvas.click();
-    else cardText.click();
+    else if (s.mode === "text") cardText.click();
+    else cardExact.click();
     refreshSizeFields();
     pageShadow.className = pageShadowClasses();
     updateQualityLabel();
@@ -877,7 +886,7 @@
     $("outputZip").checked = false;
     $("avoidBreaks").checked = true;
     $("imgQuality").value = "0.95";
-    cardText.click();
+    cardExact.click();
     refreshSizeFields();
     updateQualityLabel();
   }
@@ -893,19 +902,20 @@
   });
 
   /* ---------- Modo de conversión ---------- */
-  const cardNative = $("cardNative"), cardCanvas = $("cardCanvas"), cardText = $("cardText"), batchExtras = $("batchExtras");
+  const cardNative = $("cardNative"), cardCanvas = $("cardCanvas"), cardText = $("cardText"), cardExact = $("cardExact"), batchExtras = $("batchExtras");
   const imgQualityField = $("imgQualityField");
   const downloadZipBtn = $("downloadZipBtn");
   function selectMode(card){
-    [cardNative, cardCanvas, cardText].forEach(c => c.classList.toggle("selected", c === card));
+    [cardNative, cardCanvas, cardText, cardExact].forEach(c => c.classList.toggle("selected", c === card));
     card.querySelector("input").checked = true;
-    /* Combinar/zip están disponibles tanto en modo texto como en modo imagen (ambos sin diálogos) */
-    batchExtras.style.display = (card === cardCanvas || card === cardText) ? "block" : "none";
-    imgQualityField.style.display = (card === cardCanvas) ? "block" : "none";
+    /* Combinar/zip están disponibles en cualquier modo que no abra diálogos del navegador */
+    const isDialogFree = (card === cardCanvas || card === cardText || card === cardExact);
+    batchExtras.style.display = isDialogFree ? "block" : "none";
+    imgQualityField.style.display = (card === cardCanvas || card === cardExact) ? "block" : "none";
     downloadZipBtn.style.display = "none";
     savePrefs();
   }
-  [cardNative, cardCanvas, cardText].forEach(card => card.addEventListener("click", () => selectMode(card)));
+  [cardNative, cardCanvas, cardText, cardExact].forEach(card => card.addEventListener("click", () => selectMode(card)));
 
   $("mergeIntoOne").addEventListener("change", () => {
     if ($("mergeIntoOne").checked){ $("outputZip").checked = false; $("outputZip").disabled = true; }
@@ -1441,6 +1451,7 @@
   }
   function pxToMM(px){ return px * 25.4 / 96; }
   function mmToPx(mm){ return mm * 96 / 25.4; }
+  function mmToPt(mm){ return mm * 72 / 25.4; }
 
   async function fetchUrlJob(job){
     log("Descargando " + job.name + " …");
@@ -1799,8 +1810,109 @@
     log("PDF de texto combinado descargado", "ok");
   }
 
+  /* ---------- Recolección de líneas de texto real para la capa invisible ---------- */
+  /* Determina si un elemento es un bloque "hoja": no contiene otros elementos de bloque,
+     solo texto e inline (span, strong, em, a, etc). Estos son las unidades que tratamos
+     como una posible "línea o párrafo" a la hora de extraer texto seleccionable. */
+  const BLOCK_TAGS = new Set(["DIV","SECTION","ARTICLE","HEADER","FOOTER","MAIN","ASIDE","NAV","UL","OL","TABLE","THEAD","TBODY","TFOOT","TR","FORM","FIGURE","BLOCKQUOTE","FIGCAPTION"]);
+  function isLeafTextElement(el){
+    if (!el || el.nodeType !== 1) return false;
+    const tag = el.tagName;
+    if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "IFRAME" || tag === "SVG" || tag === "CANVAS") return false;
+    for (const child of el.children){
+      if (BLOCK_TAGS.has(child.tagName)) return false;
+      if (["H1","H2","H3","H4","H5","H6","P"].includes(child.tagName)) return false;
+    }
+    return true;
+  }
+
+  /* Divide el texto de un nodo de texto en líneas visuales reales, usando límites de
+     palabra y detectando saltos de línea por el cambio de "top" del rect devuelto por
+     Range.getClientRects(). Así la posición de cada trozo de texto invisible coincide
+     con la línea exacta que se ve en la imagen de fondo. */
+  function splitTextNodeIntoLines(textNode, range){
+    const text = textNode.textContent;
+    const len = text.length;
+    const lines = [];
+    if (!len || !text.trim()) return lines;
+
+    const boundaries = [];
+    const re = /\S+\s*/g;
+    let m;
+    while ((m = re.exec(text))) boundaries.push(m.index + m[0].length);
+    if (!boundaries.length || boundaries[boundaries.length - 1] !== len) boundaries.push(len);
+
+    let curLineStart = 0;
+    let prevTop = null;
+    let segStart = 0;
+    for (let i = 0; i < boundaries.length; i++){
+      const end = boundaries[i];
+      if (end <= segStart){ continue; }
+      try{ range.setStart(textNode, segStart); range.setEnd(textNode, end); }catch(e){ continue; }
+      const rects = range.getClientRects();
+      if (!rects.length){ segStart = end; continue; }
+      const top = Math.round(rects[rects.length - 1].top);
+      if (prevTop === null) prevTop = top;
+      if (top !== prevTop){
+        try{
+          range.setStart(textNode, curLineStart); range.setEnd(textNode, segStart);
+          const lineRects = range.getClientRects();
+          if (lineRects.length){
+            const t = text.slice(curLineStart, segStart).trim();
+            if (t) lines.push({ text: t, rect: lineRects[0] });
+          }
+        }catch(e){}
+        curLineStart = segStart;
+        prevTop = top;
+      }
+      segStart = end;
+    }
+    try{
+      range.setStart(textNode, curLineStart); range.setEnd(textNode, len);
+      const lineRects = range.getClientRects();
+      if (lineRects.length){
+        const t = text.slice(curLineStart, len).trim();
+        if (t) lines.push({ text: t, rect: lineRects[0] });
+      }
+    }catch(e){}
+    return lines;
+  }
+
+  /* Recorre todo el documento y devuelve un array de líneas: { text, top, left, height, fontSizePx } */
+  function collectTextLines(doc){
+    const lines = [];
+    const range = doc.createRange();
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+      acceptNode(node){
+        if (!node.textContent || !node.textContent.trim()) return NodeFilter.FILTER_REJECT;
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        const tag = parent.tagName;
+        if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT" || tag === "TEXTAREA") return NodeFilter.FILTER_REJECT;
+        let cs;
+        try{ cs = doc.defaultView.getComputedStyle(parent); }catch(e){ cs = null; }
+        if (cs && (cs.display === "none" || cs.visibility === "hidden")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    let node;
+    let guard = 0;
+    while ((node = walker.nextNode()) && guard < 20000){
+      guard++;
+      const parent = node.parentElement;
+      let fontSizePx = 12;
+      try{ fontSizePx = parseFloat(doc.defaultView.getComputedStyle(parent).fontSize) || 12; }catch(e){}
+      const nodeLines = splitTextNodeIntoLines(node, range);
+      nodeLines.forEach(l => {
+        lines.push({ text: l.text, top: l.rect.top, left: l.rect.left, height: l.rect.height || fontSizePx * 1.2, fontSizePx });
+      });
+    }
+    return lines;
+  }
+
   /* Renderiza un job a un canvas de alta resolución y devuelve también sus dimensiones/puntos de corte */
-  async function renderJobToCanvas(job){
+  async function renderJobToCanvas(job, opts){
+    const collectText = !!(opts && opts.collectText);
     const widthPx = parseInt($("viewportWidth").value, 10) || 1024;
     const built = buildHiddenDoc(job.html, widthPx);
     const wrap = built.wrap, iframe = built.iframe, doc = built.doc;
@@ -1816,18 +1928,47 @@
     })));
 
     const totalHeightPx = doc.body.scrollHeight || doc.documentElement.scrollHeight || 1000;
+    let textLines = null;
+    if (collectText){
+      try{ textLines = collectTextLines(doc); }
+      catch(e){ log("No se pudo extraer la capa de texto seleccionable: " + e.message, "warn"); textLines = []; }
+    }
+
     /* Escala de renderizado más alta = texto e imágenes más nítidos en el PDF resultante */
     const renderScale = Math.max(2, Math.min(4, (window.devicePixelRatio || 1) * 2, 3));
     const canvas = await html2canvas(doc.body, { scale: renderScale, useCORS: true, logging: false, windowWidth: widthPx, height: totalHeightPx, windowHeight: totalHeightPx });
 
-    const result = { canvas, doc, widthPx, totalHeightPx, renderScale };
+    const result = { canvas, doc, widthPx, totalHeightPx, renderScale, textLines };
     document.body.removeChild(wrap);
     return result;
   }
 
-  /* Genera un objeto jsPDF (una o varias páginas) a partir de un canvas ya renderizado */
-  function canvasToPdfPages(rendered, job, pageIndexOffset, existingPdf){
-    const { canvas, doc, totalHeightPx, renderScale } = rendered;
+  /* Superpone la capa de texto real invisible correspondiente a una página/porción concreta,
+     usando renderingMode "invisible" (equivalente al Tr 3 del estándar PDF, igual que en un
+     PDF con OCR): no se ve nada, pero el texto queda seleccionable y es indexado por buscadores
+     de texto (Ctrl+F, motores de búsqueda documental, etc). */
+  function overlayInvisibleTextLayer(pdf, textLines, pxPerMmCss, sliceTopPx, sliceBottomPx, m){
+    if (!textLines || !textLines.length) return;
+    textLines.forEach(line => {
+      const lineTop = line.top;
+      const lineBottom = line.top + line.height;
+      if (lineBottom <= sliceTopPx || lineTop >= sliceBottomPx) return;
+      const xMm = m.left + (line.left / pxPerMmCss);
+      const topInSliceMm = (lineTop - sliceTopPx) / pxPerMmCss;
+      const heightMm = line.height / pxPerMmCss;
+      const yMm = m.top + topInSliceMm + heightMm * 0.82;
+      const fontSizePt = Math.max(4, mmToPt(heightMm) * 0.82);
+      try{
+        pdf.setFontSize(fontSizePt);
+        pdf.text(line.text, xMm, yMm, { renderingMode: "invisible" });
+      }catch(e){ /* alguna línea con caracteres no soportados por la fuente: se ignora */ }
+    });
+  }
+
+  /* Genera un objeto jsPDF (una o varias páginas) a partir de un canvas ya renderizado.
+     Si addTextLayer es true, además coloca la capa de texto invisible seleccionable/buscable. */
+  function canvasToPdfPages(rendered, job, pageIndexOffset, existingPdf, addTextLayer){
+    const { canvas, doc, totalHeightPx, renderScale, textLines } = rendered;
     const m = parseMargins();
     const fmt = pageFormatMM();
     const jspdfNS = window.jspdf;
@@ -1849,6 +1990,10 @@
       const imgData = canvas.toDataURL("image/jpeg", quality);
       pdf.addImage(imgData, "JPEG", m.left, m.top, contentWmm, contentHmm);
       addHeaderFooterToPdf(pdf, pageIndexOffset + 1, pageIndexOffset + 1, pageWmm, pageHmm, m, job);
+      if (addTextLayer && textLines){
+        const pxPerMmCss = scalePxPerMM / renderScale;
+        overlayInvisibleTextLayer(pdf, textLines, pxPerMmCss, 0, totalHeightPx, m);
+      }
       return { pdf, pagesAdded: 1 };
     }
 
@@ -1857,7 +2002,8 @@
     const contentWmm = pageWmm - m.left - m.right;
     const contentHmm = pageHmm - m.top - m.bottom;
     const scalePxPerMM = canvas.width / contentWmm;
-    const pageHeightPxDoc = contentHmm * (scalePxPerMM / renderScale);
+    const pxPerMmCss = scalePxPerMM / renderScale;
+    const pageHeightPxDoc = contentHmm * pxPerMmCss;
 
     const avoid = $("avoidBreaks").checked;
     const breakpointsDoc = avoid
@@ -1890,6 +2036,9 @@
       const sliceHmm = sliceHeightCanvas / scalePxPerMM;
       pdf.addImage(imgData, "JPEG", m.left, m.top, contentWmm, sliceHmm);
       addHeaderFooterToPdf(pdf, pageIndexOffset + i + 1, pageIndexOffset + totalPages, pageWmm, pageHmm, m, job);
+      if (addTextLayer && textLines){
+        overlayInvisibleTextLayer(pdf, textLines, pxPerMmCss, breakpointsDoc[i], breakpointsDoc[i+1], m);
+      }
       pagesAdded++;
     }
     return { pdf, pagesAdded };
@@ -1899,15 +2048,30 @@
     if (typeof html2canvas === "undefined" || !window.jspdf){
       throw new Error("html2canvas/jsPDF no están disponibles (¿sin conexión a la CDN?)");
     }
-    const rendered = await renderJobToCanvas(job);
-    const { pdf } = canvasToPdfPages(rendered, job, 0, null);
+    const rendered = await renderJobToCanvas(job, { collectText: false });
+    const { pdf } = canvasToPdfPages(rendered, job, 0, null, false);
     stripPdfMetadata(pdf);
     const baseName = job.name.replace(/\.(html?|)$/i, "") || "documento";
     const filename = baseName + ".pdf";
     return { pdf, filename };
   }
 
-  async function processMergedBatch(jobs){
+  /* Modo "Texto + diseño exacto": mismo motor visual que "Imagen (canvas)" pero con la
+     capa de texto real invisible superpuesta, para que el resultado se vea idéntico al
+     HTML y a la vez sea seleccionable y buscable. */
+  async function generateExactPdf(job){
+    if (typeof html2canvas === "undefined" || !window.jspdf){
+      throw new Error("html2canvas/jsPDF no están disponibles (¿sin conexión a la CDN?)");
+    }
+    const rendered = await renderJobToCanvas(job, { collectText: true });
+    const { pdf } = canvasToPdfPages(rendered, job, 0, null, true);
+    stripPdfMetadata(pdf);
+    const baseName = job.name.replace(/\.(html?|)$/i, "") || "documento";
+    const filename = baseName + ".pdf";
+    return { pdf, filename };
+  }
+
+  async function processMergedBatch(jobs, addTextLayer){
     let pdf = null;
     let pageOffset = 0;
     for (const job of jobs){
@@ -1917,8 +2081,8 @@
       }
       job.status = "processing"; renderQueue(); loadJobPreview(job);
       try{
-        const rendered = await renderJobToCanvas(job);
-        const res = canvasToPdfPages(rendered, job, pageOffset, pdf);
+        const rendered = await renderJobToCanvas(job, { collectText: !!addTextLayer });
+        const res = canvasToPdfPages(rendered, job, pageOffset, pdf, !!addTextLayer);
         pdf = res.pdf;
         pageOffset += res.pagesAdded;
         job.status = "done";
@@ -1957,13 +2121,13 @@
     setStatus("procesando lote…");
     setProgress(0, queue.length);
     const mode = document.querySelector('input[name="mode"]:checked').value;
-    const isBatchMode = mode === "canvas" || mode === "text";
+    const isBatchMode = mode === "canvas" || mode === "text" || mode === "exact";
     const merge = isBatchMode && $("mergeIntoOne").checked;
     const zipOut = isBatchMode && $("outputZip").checked && !merge;
 
     if (merge){
       if (mode === "text") await processTextMergedBatch(queue.filter(j => j.status !== "done"));
-      else await processMergedBatch(queue.filter(j => j.status !== "done"));
+      else await processMergedBatch(queue.filter(j => j.status !== "done"), mode === "exact");
       setStatus("listo"); setProgress(queue.length, queue.length);
       $("processBtn").disabled = queue.length === 0;
       log("Lote combinado finalizado", "ok");
@@ -1992,6 +2156,14 @@
             lastZipBlobs.push({ filename, blob });
           } else {
             triggerDownloadBlob(blob, filename);
+          }
+        } else if (mode === "exact"){
+          const { pdf, filename } = await generateExactPdf(job);
+          if (zipOut){
+            const blob = pdf.output("blob");
+            lastZipBlobs.push({ filename, blob });
+          } else {
+            pdf.save(filename);
           }
         } else {
           const { pdf, filename } = await generateCanvas(job);
